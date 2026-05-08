@@ -1,0 +1,1644 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PHANTOM - Kontrol Paneli</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <style>
+    /* === STUDIO DARK THEME (Vercel/Linear Inspired) === */
+    :root {
+      --bg-app: #000000;
+      --bg-surface: #0a0a0b;
+      --bg-surface-hover: #121214;
+      --bg-element: #141417;
+
+      --border-subtle: #1f1f22;
+      --border-strong: #2e2e33;
+      --border-focus: #4b4b52;
+
+      --text-primary: #ededed;
+      --text-secondary: #a1a1aa;
+      --text-tertiary: #71717a;
+
+      --accent-color: #ffffff;
+      /* Modern siyah/beyaz kontrastı */
+      --accent-blue: #3b82f6;
+      --accent-red: #ef4444;
+      --accent-green: #10b981;
+
+      --font-sans: 'Inter', 'Segoe UI', Arial, sans-serif;
+      --font-mono: 'JetBrains Mono', Consolas, monospace;
+
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-app);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      overflow: hidden;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Özel Grid Arkaplanı - Mühendislik hissi için */
+    body::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image: linear-gradient(var(--border-subtle) 1px, transparent 1px), linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.2;
+    }
+
+    /* SCROLLBAR - Görünmez gibi ama işlevsel */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-strong);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-tertiary);
+    }
+
+    /* ANA TAŞIYICI */
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+      padding: 12px;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* === HEADER === */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .brand-area {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      position: relative;
+      z-index: 2;
+    }
+
+    .brand-logo {
+      width: 22px;
+      height: 22px;
+      background: var(--text-primary);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-logo svg {
+      width: 14px;
+      height: 14px;
+      fill: var(--bg-app);
+    }
+
+    .brand-name {
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: 1px;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .brand-version {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      padding: 2px 5px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+    }
+
+    /* SEKMELER */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 3;
+      white-space: nowrap;
+    }
+
+    .tab {
+      background: transparent;
+      color: var(--text-secondary);
+      border: none;
+      padding: 6px 9px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.15px;
+      line-height: 1;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: 0.2s;
+      position: relative;
+    }
+
+    .tab:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .tab.active {
+      color: var(--text-primary);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.075), var(--bg-element));
+      box-shadow: inset 0 0 0 1px var(--border-strong);
+    }
+
+    /* AKSİYON BUTONU */
+    .btn-run {
+      background: var(--text-primary);
+      color: var(--bg-app);
+      border: none;
+      padding: 7px 11px;
+      border-radius: var(--radius-sm);
+      font-weight: 800;
+      font-size: 11px;
+      letter-spacing: 0.15px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: 0.2s;
+    }
+
+    .btn-run:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-run.active {
+      background: var(--accent-red);
+      color: white;
+    }
+
+    .btn-run .key {
+      color: var(--bg-app);
+      opacity: 0.6;
+      font-family: var(--font-mono);
+      font-size: 10px;
+    }
+
+    .btn-run.active .key {
+      color: white;
+      opacity: 0.8;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .client-toggle-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .client-toggle-btn {
+      height: 29px;
+      min-width: 50px;
+      border: 1px solid rgba(16, 185, 129, 0.30);
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.055));
+      color: #b8f7dc;
+      border-radius: var(--radius-sm);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      line-height: 1;
+      cursor: pointer;
+      transition: 0.2s;
+      font-family: var(--font-sans);
+    }
+
+    .client-toggle-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(34, 197, 94, 0.65);
+    }
+
+    .client-toggle-btn.off {
+      border-color: rgba(239, 68, 68, 0.28);
+      background: linear-gradient(180deg, rgba(239, 68, 68, 0.10), rgba(239, 68, 68, 0.045));
+      color: #fca5a5;
+    }
+
+    .client-toggle-btn.off:hover {
+      border-color: rgba(239, 68, 68, 0.65);
+    }
+
+    /* === SAYFALAR === */
+    .page {
+      display: none;
+      flex: 1;
+      min-height: 0;
+      overflow-y: hidden;
+      overflow-x: hidden;
+      padding-right: 4px;
+    }
+
+    .page.active {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      min-height: 0;
+      align-items: stretch;
+    }
+
+    /* === PANEL (KART) TASARIMI === */
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      transition: border-color 0.2s;
+    }
+
+    .panel:hover {
+      border-color: var(--border-strong);
+    }
+
+    .panel-header {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: none;
+      letter-spacing: 0.2px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .status-indicator.off {
+      color: var(--text-tertiary);
+      opacity: .65;
+    }
+
+    .status-indicator.off .status-dot {
+      background: var(--accent-red);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent-green);
+      border-radius: 50%;
+    }
+
+    .panel-body {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+      min-height: 0;
+      overflow-y: hidden;
+    }
+
+    /* === FORM ELEMANLARI === */
+    .form-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .form-label {
+      width: 52px;
+      color: var(--text-secondary);
+      font-size: 10px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .input-wrapper {
+      display: flex;
+      flex: 1;
+      min-width: 0;
+      position: relative;
+    }
+
+    .input-field {
+      width: 100%;
+      background: var(--bg-element);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 6px 8px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      outline: none;
+      transition: 0.2s;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    .input-field:focus {
+      border-color: var(--border-focus);
+    }
+
+    select.input-field {
+      appearance: none;
+      cursor: pointer;
+      font-family: var(--font-sans);
+    }
+
+    .icon-btn {
+      background: var(--bg-element);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      margin-left: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: 0.2s;
+    }
+
+    .icon-btn:hover {
+      color: var(--text-primary);
+      border-color: var(--border-focus);
+    }
+
+    .icon-btn svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+    }
+
+    /* === VİDEO SENSÖRÜ (FEED) === */
+    .feed-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 5px;
+      margin-bottom: 3px;
+      flex-shrink: 0;
+    }
+
+    .feed-container {
+      flex: 1;
+      min-height: 120px;
+      background: #050505;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .feed-container img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      z-index: 1;
+    }
+
+    /* Sensör Crosshair Tasarımı */
+    .feed-container::before,
+    .feed-container::after {
+      content: '';
+      position: absolute;
+      background: var(--border-strong);
+    }
+
+    .feed-container::before {
+      width: 100%;
+      height: 1px;
+      top: 50%;
+    }
+
+    .feed-container::after {
+      width: 1px;
+      height: 100%;
+      left: 50%;
+    }
+
+    .feed-center {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border: 1px solid var(--border-focus);
+      border-radius: 50%;
+      z-index: 1;
+    }
+
+    .feed-status {
+      z-index: 2;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 6px 12px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: var(--text-tertiary);
+    }
+
+    .feed-metrics {
+      position: absolute;
+      bottom: 8px;
+      left: 10px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-secondary);
+      z-index: 2;
+    }
+
+    .feed-metrics span {
+      color: var(--accent-blue);
+    }
+
+    /* === ZARİF TOGGLE (APPLE/LINEAR STYLE) === */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+    }
+
+    .toggle-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .toggle-title {
+      font-size: 10px;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .toggle-desc {
+      font-size: 9px;
+      color: var(--text-tertiary);
+    }
+
+    .toggle {
+      position: relative;
+      width: 32px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: var(--bg-element);
+      border: 1px solid var(--border-subtle);
+      border-radius: 18px;
+      transition: .2s;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 2px;
+      bottom: 2px;
+      background-color: var(--text-secondary);
+      border-radius: 50%;
+      transition: .2s;
+    }
+
+    input:checked+.slider {
+      background-color: var(--text-primary);
+      border-color: var(--text-primary);
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(14px);
+      background-color: var(--bg-app);
+    }
+
+    /* === STATİSTİK KUTULARI === */
+    .stat-panel {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .stat-box {
+      flex: 1;
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .stat-box-title {
+      font-size: 9px;
+      color: var(--text-tertiary);
+      text-transform: none;
+      letter-spacing: 0.2px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .stat-box-title span.reset {
+      color: var(--text-secondary);
+      cursor: pointer;
+      text-transform: none;
+      font-size: 9px;
+    }
+
+    .stat-box-title span.reset:hover {
+      color: var(--text-primary);
+    }
+
+    .stat-value-group {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .stat-value {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .stat-sub {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-tertiary);
+      text-transform: none;
+    }
+
+    /* === TERMİNAL === */
+    .terminal {
+      flex: 1;
+      background: var(--bg-app);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+      overflow-y: auto;
+      line-height: 1.6;
+      min-height: 150px;
+    }
+
+    .log-line {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+      padding-bottom: 4px;
+    }
+
+    .log-time {
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+
+    .log-type.info {
+      color: var(--accent-blue);
+    }
+
+    .log-type.success {
+      color: var(--accent-green);
+    }
+
+    .log-msg {
+      color: var(--text-primary);
+      word-break: break-all;
+    }
+
+    #pageOps {
+      min-height: 0;
+      height: 100%;
+    }
+
+    #pageOps .grid-2 {
+      flex: 1;
+      height: 100%;
+      min-height: 0;
+      grid-template-rows: minmax(0, 1fr);
+    }
+
+    #pageOps .panel {
+      height: 100%;
+      min-height: 0;
+    }
+
+    #pageOps .panel-body {
+      display: grid;
+      grid-template-rows: 28px 28px 28px 24px minmax(0, 1fr);
+      gap: 7px;
+      min-height: 0;
+    }
+
+    #pageOps .form-row {
+      height: 28px;
+      min-height: 28px;
+    }
+
+    #pageOps .input-field {
+      height: 28px;
+      min-height: 28px;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    #pageOps .icon-btn {
+      width: 28px;
+      height: 28px;
+      margin-left: 4px;
+    }
+
+    #pageOps .feed-header {
+      height: 24px;
+      margin: 0;
+      min-height: 24px;
+    }
+
+    #pageOps .feed-container {
+      height: 100%;
+      min-height: 0;
+    }
+
+    #pageControl .panel-title {
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    #pageControl {
+      height: 100%;
+      min-height: 0;
+    }
+
+    #pageControl>.grid-2 {
+      flex: 1;
+      height: 100%;
+      min-height: 0;
+      grid-template-rows: minmax(0, 1fr);
+    }
+
+    #pageControl .panel {
+      height: 100%;
+      min-height: 0;
+    }
+
+    #pageControl .panel-body {
+      display: grid;
+      grid-template-rows: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      height: 100%;
+      min-height: 0;
+      padding: 10px;
+    }
+
+    #pageControl .form-row {
+      min-height: 0;
+      height: 100%;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      padding: 10px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.018);
+    }
+
+    #pageControl .form-label {
+      width: 88px;
+      min-width: 88px;
+      max-width: 88px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #pageControl .input-field {
+      height: 28px;
+      min-height: 28px;
+      padding-top: 0;
+      padding-bottom: 0;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    #pageControl .toggle-row {
+      min-height: 0;
+      height: 100%;
+      padding: 10px;
+      gap: 10px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.018);
+    }
+
+    #pageControl .toggle-row[style] {
+      padding-top: 10px !important;
+    }
+
+    #pageControl .toggle-info {
+      min-width: 0;
+      gap: 2px;
+    }
+
+    #pageControl .toggle-title {
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.15;
+    }
+
+    #pageControl .toggle-desc {
+      font-size: 10px;
+      line-height: 1.35;
+    }
+
+    #pageControl .input-wrapper[style] {
+      flex: 1 1 auto !important;
+    }
+
+    #pageControl .input-wrapper {
+      min-width: 0;
+    }
+
+    #pageControl .stat-panel {
+      margin-top: 0;
+      height: 100%;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.018);
+    }
+
+    #pageControl .stat-box-title {
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    #pageControl .stat-box-title span.reset {
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    #pageControl .stat-sub {
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    #pageControl .stat-value {
+      font-size: 16px !important;
+      line-height: 1;
+    }
+
+    #pageControl .stat-box {
+      min-height: 0;
+      justify-content: space-between;
+      padding: 10px;
+    }
+
+    #pageControl .stat-value-group {
+      min-height: 0;
+      flex: 1;
+      align-items: center;
+    }
+
+    @media (max-width: 780px) {
+      .brand-version {
+        display: none;
+      }
+
+      .form-row[style] {
+        margin-top: 2px !important;
+        margin-bottom: 8px !important;
+      }
+
+      #gTargetQueue {
+        min-width: 0;
+      }
+
+      .input-wrapper[style] {
+        flex-basis: 120px !important;
+      }
+
+      #pageControl .form-row[style] {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+      }
+
+      #pageControl .input-wrapper[style] {
+        flex: 1 1 auto !important;
+        flex-basis: auto !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+
+    <!-- === HEADER === -->
+    <header class="header">
+      <div class="brand-area">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2L2 22h20L12 2z" />
+          </svg>
+        </div>
+        <div class="brand-name">PHANTOM</div>
+        <div class="brand-version">v3.0</div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" id="tabOps" onclick="showPage('Ops')">İstemciler</button>
+        <button class="tab" id="tabControl" onclick="showPage('Control')">Ayarlar</button>
+        <button class="tab" id="tabLog" onclick="showPage('Log')">Loglar</button>
+      </div>
+
+      <div class="header-actions">
+        <div class="client-toggle-group">
+          <button class="client-toggle-btn" id="client1Toggle" onclick="toggleClientManual(1)" title="Client 1 aktif/pasif">C1 ON</button>
+          <button class="client-toggle-btn" id="client2Toggle" onclick="toggleClientManual(2)" title="Client 2 aktif/pasif">C2 ON</button>
+        </div>
+
+        <button class="btn-run" id="runBtn" onclick="toggleBot()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <span id="runBtnTxt">Başlat</span>
+          <span class="key">F5</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- === SAYFA 1: İSTEMCİLER === -->
+    <div class="page active" id="pageOps">
+      <div class="grid-2">
+
+        <!-- CLIENT 1 -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Client 1</span>
+            <div class="status-indicator" id="client1PanelStatus" title="Client 1 durumu">
+              <div class="status-dot"></div> Hazır
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="form-row">
+              <span class="form-label">Model</span>
+              <div class="input-wrapper">
+                <select class="input-field" id="mdl1">
+                  <option>Model seçilmedi</option>
+                </select>
+                <svg
+                  style="position:absolute; right:8px; top:10px; width:12px; height:12px; stroke:var(--text-tertiary); fill:none;"
+                  viewBox="0 0 24 24">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+              <button class="icon-btn" onclick="selModel(1)" title="Model seç"><svg viewBox="0 0 24 24">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg></button>
+            </div>
+            <div class="form-row">
+              <span class="form-label">Pencere</span>
+              <div class="input-wrapper">
+                <select class="input-field" id="win1" onchange="saveC(1)">
+                  <option>Pencere seçilmedi</option>
+                </select>
+                <svg
+                  style="position:absolute; right:8px; top:10px; width:12px; height:12px; stroke:var(--text-tertiary); fill:none;"
+                  viewBox="0 0 24 24">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+              <button class="icon-btn" onclick="fillWins(1, null, false)" title="Pencere yenile"><svg viewBox="0 0 24 24">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg></button>
+            </div>
+            <div class="form-row">
+              <span class="form-label">HP Panel</span>
+              <div class="input-wrapper">
+                <input type="text" class="input-field" id="hpReady1" value="Seçilmedi" readonly>
+              </div>
+              <button class="icon-btn" onclick="selHp(1)" title="HP panel seç"><svg viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg></button>
+            </div>
+
+            <div class="feed-header">
+              <span class="panel-title">Canlı Görüntü</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:10px; color:var(--text-secondary);">Debug</span>
+                <label class="toggle"><input type="checkbox" id="dbg1" checked onchange="saveC(1)"><span class="slider"></span></label>
+              </div>
+            </div>
+
+            <div class="feed-container">
+              <img id="cfeed1" src="" alt="Client 1 debug feed" style="display:none">
+              <div class="feed-center"></div>
+              <div class="feed-status" id="coff1">NO_SIGNAL</div>
+              <div class="feed-metrics" id="cov1">FPS <span>0.0</span> • MS <span>--</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CLIENT 2 -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Client 2</span>
+            <div class="status-indicator" id="client2PanelStatus" title="Client 2 durumu">
+              <div class="status-dot"></div> Hazır
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="form-row">
+              <span class="form-label">Model</span>
+              <div class="input-wrapper">
+                <select class="input-field" id="mdl2">
+                  <option>Model seçilmedi</option>
+                </select>
+                <svg
+                  style="position:absolute; right:8px; top:10px; width:12px; height:12px; stroke:var(--text-tertiary); fill:none;"
+                  viewBox="0 0 24 24">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+              <button class="icon-btn" onclick="selModel(2)" title="Model seç"><svg viewBox="0 0 24 24">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg></button>
+            </div>
+            <div class="form-row">
+              <span class="form-label">Pencere</span>
+              <div class="input-wrapper">
+                <select class="input-field" id="win2" onchange="saveC(2)">
+                  <option>Pencere seçilmedi</option>
+                </select>
+                <svg
+                  style="position:absolute; right:8px; top:10px; width:12px; height:12px; stroke:var(--text-tertiary); fill:none;"
+                  viewBox="0 0 24 24">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+              <button class="icon-btn" onclick="fillWins(2, null, false)" title="Pencere yenile"><svg viewBox="0 0 24 24">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg></button>
+            </div>
+            <div class="form-row">
+              <span class="form-label">HP Panel</span>
+              <div class="input-wrapper">
+                <input type="text" class="input-field" id="hpReady2" value="Seçilmedi" readonly>
+              </div>
+              <button class="icon-btn" onclick="selHp(2)" title="HP panel seç"><svg viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg></button>
+            </div>
+
+            <div class="feed-header">
+              <span class="panel-title">Canlı Görüntü</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:10px; color:var(--text-secondary);">Debug</span>
+                <label class="toggle"><input type="checkbox" id="dbg2" checked onchange="saveC(2)"><span class="slider"></span></label>
+              </div>
+            </div>
+
+            <div class="feed-container">
+              <img id="cfeed2" src="" alt="Client 2 debug feed" style="display:none">
+              <div class="feed-center"></div>
+              <div class="feed-status" id="coff2">NO_SIGNAL</div>
+              <div class="feed-metrics" id="cov2">FPS <span>0.0</span> • MS <span>--</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- === SAYFA 2: AYARLAR === -->
+    <div class="page" id="pageControl">
+      <div class="grid-2">
+
+        <!-- GÜVENLİK -->
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Güvenlik</span></div>
+          <div class="panel-body">
+
+            <div class="form-row" style="margin-bottom: 8px;">
+              <span class="form-label">Captcha Tipi</span>
+              <div class="input-wrapper">
+                <select class="input-field" id="gCapType" onchange="saveCaptchaGlobal()">
+                  <option value="tip4">Origins Çözümleyici</option>
+                  <option value="tip1">Helios Algoritması</option>
+                  <option value="tip2">Merlis Motoru</option>
+                </select>
+                <svg
+                  style="position:absolute; right:8px; top:10px; width:12px; height:12px; stroke:var(--text-tertiary); fill:none;"
+                  viewBox="0 0 24 24">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+            </div>
+
+            <div class="toggle-row" style="border-top: 1px solid var(--border-subtle); padding-top: 12px;">
+              <div class="toggle-info">
+                <span class="toggle-title">Mesaj Koruması</span>
+                <span class="toggle-desc">Mesaj algılanırsa otomatik cevap verir.</span>
+              </div>
+              <label class="toggle"><input type="checkbox" id="gMsgCap" checked onchange="saveCaptchaGlobal()"><span class="slider"></span></label>
+            </div>
+
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <span class="toggle-title">Kurtarma</span>
+                <span class="toggle-desc">Takılma algılanırsa kurtarma uygular.</span>
+              </div>
+              <label class="toggle"><input type="checkbox" id="gAntiStuckGlobal" onchange="saveAntiSucukGlobal()"><span class="slider"></span></label>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- OTOMASYON VE VERİ -->
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Otomasyon</span></div>
+          <div class="panel-body">
+
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <span class="toggle-title">Oto Loot</span>
+                <span class="toggle-desc">Düşen öğeleri otomatik toplar.</span>
+              </div>
+              <label class="toggle"><input type="checkbox" id="gLoot" onchange="saveGlobalAdvanced()"><span class="slider"></span></label>
+            </div>
+
+            <div class="form-row" style="margin-top: 4px; margin-bottom: 12px;">
+              <span class="form-label" style="width:auto; margin-right:auto;">Hedef Kuyruğu</span>
+              <div class="input-wrapper" style="flex: 0 1 150px;">
+                <select class="input-field" id="gTargetQueue" onchange="saveTargetQueue()">
+                  <option value="on">Aktif</option>
+                  <option value="off">Kapalı</option>
+                </select>
+                <svg
+                  style="position:absolute; right:8px; top:10px; width:12px; height:12px; stroke:var(--text-tertiary); fill:none;"
+                  viewBox="0 0 24 24">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+            </div>
+
+            <!-- VERİ KUTULARI -->
+            <div class="stat-panel">
+              <div class="stat-box">
+                <div class="stat-box-title">Client 1 <span class="reset" onclick="resetKills()">Sıfırla</span>
+                </div>
+                <div class="stat-value-group">
+                  <div>
+                    <div class="stat-sub">Toplam Kill</div>
+                    <div class="stat-value" id="sK1">0</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div class="stat-sub">Süre</div>
+                    <div class="stat-value" id="sKU1" style="font-size:14px; color:var(--text-secondary);">00:00
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-box-title">Client 2</div>
+                <div class="stat-value-group">
+                  <div>
+                    <div class="stat-sub">Toplam Kill</div>
+                    <div class="stat-value" id="sK2">0</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div class="stat-sub">Süre</div>
+                    <div class="stat-value" id="sKU2" style="font-size:14px; color:var(--text-secondary);">00:00
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- === SAYFA 3: LOGLAR === -->
+    <div class="page" id="pageLog">
+      <div class="panel" style="height: 100%;">
+        <div class="panel-header">
+          <span class="panel-title">Loglar</span>
+          <div style="display:flex; gap:6px;">
+            <button class="tab" style="padding: 2px 8px; border: 1px solid var(--border-subtle);" onclick="clearTrm()">Temizle</button>
+            <button class="tab" style="padding: 2px 8px; border: 1px solid var(--border-subtle);" onclick="copyTrm()">Kopyala</button>
+          </div>
+        </div>
+        <div class="panel-body" style="padding:0;">
+          <div class="terminal" id="trmList"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const CLIENT_IDS = [1, 2];
+    let lastConfig = null;
+    let _trmLogs = [];
+    let _trmClearedCount = 0;
+    let loopBusy = false;
+    let initStarted = false;
+
+    const apiReady = () => !!window.pywebview?.api;
+
+    function toast(message) {
+      let el = document.getElementById('toast');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'toast';
+        el.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);padding:8px 14px;border:1px solid var(--border-strong);border-radius:6px;background:var(--bg-surface);color:var(--text-primary);font-size:12px;z-index:9999;opacity:0;transition:.2s;pointer-events:none';
+        document.body.appendChild(el);
+      }
+      el.textContent = message;
+      el.style.opacity = '1';
+      clearTimeout(el._t);
+      el._t = setTimeout(() => { el.style.opacity = '0'; }, 2200);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+    }
+
+    function modelFileName(path) {
+      const text = String(path || '').trim();
+      return text ? text.split(/[\\/]/).pop() : 'Model Seçilmedi';
+    }
+
+    function formatDuration(seconds) {
+      const s = Math.max(0, Math.floor(Number(seconds) || 0));
+      const h = String(Math.floor(s / 3600)).padStart(2, '0');
+      const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+      return `${h}:${m}`;
+    }
+
+    function showPage(pageId) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      const page = document.getElementById('page' + pageId);
+      const tab = document.getElementById('tab' + pageId);
+      if (page) page.classList.add('active');
+      if (tab) tab.classList.add('active');
+    }
+
+    function updateRunButton(active) {
+      const btn = document.getElementById('runBtn');
+      const txt = document.getElementById('runBtnTxt');
+      if (txt) txt.textContent = active ? 'Durdur' : 'Başlat';
+      if (btn) btn.classList.toggle('active', !!active);
+    }
+
+    async function toggleBot() {
+      if (!apiReady()) return toast('pywebview API hazır değil');
+      const res = await pywebview.api.toggle_bot();
+      updateRunButton(!!res?.aktif);
+      toast(res?.aktif ? 'Bot başlatıldı' : 'Bot durduruldu');
+      await loop();
+    }
+
+    function clientFormData(idx) {
+      return {
+        pencere: document.getElementById(`win${idx}`)?.value || 'Yok',
+        debug_on: !!document.getElementById(`dbg${idx}`)?.checked,
+      };
+    }
+
+    async function saveC(idx) {
+      if (!apiReady()) return toast('pywebview API hazır değil');
+      const data = clientFormData(idx);
+      await pywebview.api.save_client(idx, data);
+      lastConfig = lastConfig || {};
+      lastConfig[`c${idx}`] = { ...(lastConfig[`c${idx}`] || {}), ...data };
+      toast(`${idx}. istemci kaydedildi`);
+    }
+
+    function syncHeaderClientToggle(idx, active) {
+      const isActive = active !== false;
+      const headerBtn = document.getElementById(`client${idx}Toggle`);
+      if (headerBtn) {
+        headerBtn.classList.toggle('off', !isActive);
+        headerBtn.textContent = `C${idx} ${isActive ? 'ON' : 'OFF'}`;
+        headerBtn.title = `Client ${idx} ${isActive ? 'aktif' : 'pasif'}`;
+      }
+
+      const panelStatus = document.getElementById(`client${idx}PanelStatus`);
+      if (panelStatus) {
+        panelStatus.classList.toggle('off', !isActive);
+        panelStatus.innerHTML = '<div class="status-dot"></div>' + (isActive ? ' Hazır' : ' Pasif');
+        panelStatus.title = `Client ${idx} ${isActive ? 'aktif' : 'pasif'}`;
+      }
+    }
+
+    async function toggleClientManual(idx) {
+      if (!apiReady()) return toast('pywebview API hazır değil');
+      lastConfig = lastConfig || {};
+      const current = lastConfig?.[`c${idx}`]?.aktif !== false;
+      const next = !current;
+      await pywebview.api.save_client(idx, { aktif: next });
+      lastConfig[`c${idx}`] = { ...(lastConfig[`c${idx}`] || {}), aktif: next };
+      syncHeaderClientToggle(idx, next);
+      toast(`${idx}. istemci ${next ? 'aktif' : 'pasif'}`);
+      await loop();
+    }
+
+    async function selModel(idx) {
+      if (!apiReady()) return toast('pywebview API hazır değil');
+      const res = await pywebview.api.select_model(idx);
+      if (res?.ok) {
+        const mdl = document.getElementById(`mdl${idx}`);
+        if (mdl) {
+          if (mdl.tagName === 'SELECT') mdl.innerHTML = `<option>${escapeHtml(modelFileName(res.path))}</option>`;
+          else mdl.textContent = modelFileName(res.path);
+        }
+        lastConfig = lastConfig || {};
+        lastConfig[`c${idx}`] = { ...(lastConfig[`c${idx}`] || {}), model_yolu: res.path };
+        toast('Model seçildi');
+      }
+    }
+
+    async function selHp(idx) {
+      if (!apiReady()) return toast('pywebview API hazır değil');
+      await pywebview.api.select_hp_bar(idx);
+      const hp = document.getElementById(`hpReady${idx}`);
+      if (hp) hp.value = 'Seçim bekleniyor';
+      toast('HP panel seçim ekranı açıldı');
+    }
+
+    function isAssignableWindow(win) {
+      return win && win !== 'Yok';
+    }
+
+    async function fillWins(idx, cur = null, silent = true) {
+      const sel = document.getElementById(`win${idx}`);
+      if (!sel || !apiReady()) return;
+      const prev = cur ?? sel.value ?? lastConfig?.[`c${idx}`]?.pencere ?? 'Yok';
+      const wins = await pywebview.api.get_windows();
+      const otherIdx = idx === 1 ? 2 : 1;
+      const otherValue = document.getElementById(`win${otherIdx}`)?.value ?? lastConfig?.[`c${otherIdx}`]?.pencere ?? 'Yok';
+      sel.innerHTML = '';
+      wins.forEach(win => {
+        const opt = document.createElement('option');
+        const locked = isAssignableWindow(win) && win === otherValue && win !== prev;
+        opt.value = win;
+        opt.textContent = locked ? `${win} [diğer istemci]` : win;
+        opt.disabled = locked;
+        if (win === prev) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      if (![...sel.options].some(opt => opt.selected) && sel.options.length) sel.selectedIndex = 0;
+      if (!silent) toast('Pencere listesi yenilendi');
+    }
+
+    async function refreshAllWins(silent = true) {
+      await fillWins(1, lastConfig?.c1?.pencere ?? 'Yok', true);
+      await fillWins(2, lastConfig?.c2?.pencere ?? 'Yok', true);
+      if (!silent) toast('Pencere listeleri yenilendi');
+    }
+
+    function globalAdvancedSource(cfg) {
+      return {
+        oto_loot: cfg?.oto_loot ?? cfg?.c1?.oto_loot ?? true,
+        message_captcha: cfg?.message_captcha ?? cfg?.c1?.message_captcha ?? true,
+        captcha_tip1: cfg?.captcha_tip1 ?? cfg?.c1?.captcha_tip1 ?? true,
+        captcha_tip2: cfg?.captcha_tip2 ?? cfg?.c1?.captcha_tip2 ?? false,
+        captcha_tip4: cfg?.captcha_tip4 ?? cfg?.c1?.captcha_tip4 ?? false,
+        anti_sucuk: cfg?.anti_sucuk ?? false,
+        hedef_kuyruk_aktif: cfg?.hedef_kuyruk_aktif ?? ['2', '3', '4', '5', 'aktif', 'true', '1', 'on'].includes(String(cfg?.hedef_kuyruk_sayisi ?? cfg?.c1?.hedef_kuyruk_sayisi ?? 'default').toLowerCase()),
+      };
+    }
+
+    function syncCaptchaGlobal(cfg) {
+      const src = globalAdvancedSource(cfg || lastConfig || {});
+      const type = document.getElementById('gCapType');
+      const msg = document.getElementById('gMsgCap');
+      const anti = document.getElementById('gAntiStuckGlobal');
+      if (msg) msg.checked = !!src.message_captcha;
+      if (anti) anti.checked = !!src.anti_sucuk;
+      if (type) {
+        if (src.captcha_tip4) type.value = 'tip4';
+        else if (src.captcha_tip2) type.value = 'tip2';
+        else type.value = 'tip1';
+      }
+    }
+
+    function syncGlobalAdvanced(cfg) {
+      const src = globalAdvancedSource(cfg || lastConfig || {});
+      const loot = document.getElementById('gLoot');
+      if (loot) loot.checked = !!src.oto_loot;
+      syncTargetQueuePicker(cfg);
+    }
+
+    function syncTargetQueuePicker(cfg) {
+      const el = document.getElementById('gTargetQueue');
+      if (!el) return;
+      const src = globalAdvancedSource(cfg || lastConfig || {});
+      el.value = src.hedef_kuyruk_aktif ? 'on' : 'off';
+    }
+
+    async function saveCaptchaGlobal() {
+      if (!apiReady()) return toast('pywebview API hazır değil');
+      const selected = document.getElementById('gCapType')?.value || 'tip4';
+      const payload = {
+        captcha: true,
+        captcha_tip1: selected === 'tip1',
+        captcha_tip2: selected === 'tip2',
+        captcha_tip3: false,
+        captcha_tip4: selected === 'tip4',
+        message_captcha: !!document.getElementById('gMsgCap')?.checked,
+      };
+      await pywebview.api.save_global(payload);
+      lastConfig = { ...(lastConfig || {}), ...payload };
+      toast('Güvenlik ayarları kaydedildi');
+    }
+
+    async function saveAntiSucukGlobal() {
+      if (!apiReady()) return toast('pywebview API hazır değil');
+      const payload = {
+        anti_sucuk: !!document.getElementById('gAntiStuckGlobal')?.checked,
+        anti_aranma_aktif: false,
+        anti_aranma_sn: 0,
+        anti_stuck_sn: 20,
+        anti_hareketsiz_sn: 20,
+        anti_kurtarma_bekleme_sn: 5,
+      };
+      await pywebview.api.save_global(payload);
+      lastConfig = { ...(lastConfig || {}), ...payload };
+      toast('Kurtarma ayarı kaydedildi');
+    }
+
+    async function saveGlobalAdvanced() {
+      if (!apiReady()) return toast('pywebview API hazır değil');
+      const payload = { oto_loot: !!document.getElementById('gLoot')?.checked };
+      await pywebview.api.save_global(payload);
+      lastConfig = { ...(lastConfig || {}), ...payload };
+      toast('Otomasyon ayarı kaydedildi');
+    }
+
+    async function saveTargetQueue() {
+      if (!apiReady()) return toast('pywebview API hazır değil');
+      const active = document.getElementById('gTargetQueue')?.value === 'on';
+      const payload = { hedef_kuyruk_aktif: active, hedef_kuyruk_sayisi: active ? 'aktif' : 'default' };
+      await pywebview.api.save_global(payload);
+      lastConfig = { ...(lastConfig || {}), ...payload };
+      toast(active ? 'Hedef kuyruğu aktif' : 'Hedef kuyruğu kapalı');
+    }
+
+    async function resetKills() {
+      if (!apiReady()) return toast('pywebview API hazır değil');
+      await pywebview.api.reset_kills();
+      document.getElementById('sK1').textContent = '0';
+      document.getElementById('sK2').textContent = '0';
+      toast('Farm verileri sıfırlandı');
+      await loop();
+    }
+
+    function renderTerminalPage(logs) {
+      _trmLogs = logs || [];
+      const el = document.getElementById('trmList');
+      if (!el) return;
+      const visible = _trmLogs.slice(_trmClearedCount);
+      const prevTop = el.scrollTop;
+      const prevHeight = el.scrollHeight;
+      const clientHeight = el.clientHeight;
+      const atBottom = prevTop + clientHeight >= prevHeight - 8;
+      el.innerHTML = visible.length ? visible.map(entry => {
+        const level = String(entry?.level || entry?.type || 'INFO').toUpperCase();
+        const msg = escapeHtml(entry?.msg || entry?.message || String(entry || ''));
+        const ts = entry?.ts || entry?.time || '';
+        return `<div class="log-line"><span class="log-time">${escapeHtml(ts ? `[${ts}]` : '')}</span><span class="log-type ${level.toLowerCase()}">[${escapeHtml(level)}]</span><span class="log-msg">${msg}</span></div>`;
+      }).join('') : '<div class="log-line"><span class="log-msg">Log bekleniyor...</span></div>';
+      if (atBottom) el.scrollTop = el.scrollHeight;
+      else el.scrollTop = prevTop + (el.scrollHeight - prevHeight);
+    }
+
+    function clearTrm() {
+      _trmClearedCount = _trmLogs.length;
+      const el = document.getElementById('trmList');
+      if (el) el.innerHTML = '<div class="log-line"><span class="log-msg">Log temizlendi. Yeni bot logları burada görünecek.</span></div>';
+    }
+
+    async function copyTrm() {
+      const text = (_trmLogs.slice(_trmClearedCount).map(x => x?.msg || x?.message || String(x)).join('\n'));
+      try {
+        await navigator.clipboard.writeText(text);
+        toast('Log kopyalandı');
+      } catch {
+        toast('Log kopyalanamadı');
+      }
+    }
+
+    function renderGlobal(status) {
+      updateRunButton(!!status?.aktif);
+      const elapsed = status?.started_at ? formatDuration(Date.now() / 1000 - status.started_at) : '00:00';
+      CLIENT_IDS.forEach(i => {
+        const client = status?.clients?.[String(i)] || {};
+        syncHeaderClientToggle(i, client.aktif !== false);
+        const hp = document.getElementById(`hpReady${i}`);
+      if (hp) hp.value = client.hp_template ? 'Hazır' : 'Seçilmedi';
+        const kill = document.getElementById(`sK${i}`);
+        const time = document.getElementById(`sKU${i}`);
+        if (kill) kill.textContent = String(client.kill_count ?? 0);
+        if (time) time.textContent = elapsed;
+      });
+    }
+
+    async function loop() {
+      if (!apiReady() || loopBusy) return;
+      loopBusy = true;
+      try {
+        const status = await pywebview.api.get_status();
+        renderGlobal(status);
+        renderTerminalPage(status.logs || []);
+        for (const i of CLIENT_IDS) {
+          const client = status.clients?.[String(i)] || {};
+          const img = document.getElementById(`cfeed${i}`);
+          const off = document.getElementById(`coff${i}`);
+          const cov = document.getElementById(`cov${i}`);
+          const debugOn = !!document.getElementById(`dbg${i}`)?.checked;
+          if (img && off && client.frame && status.aktif && debugOn) {
+            img.src = `data:image/jpeg;base64,${client.frame}`;
+            img.style.display = 'block';
+            off.style.display = 'none';
+          } else {
+            if (img) img.style.display = 'none';
+            if (off) {
+              off.style.display = 'block';
+              off.textContent = status.aktif ? 'NO_SIGNAL' : 'OFFLINE';
+            }
+          }
+          if (cov) cov.innerHTML = `FPS <span>${Number(status.vision_fps || 0).toFixed(1)}</span> • MS <span>--</span>`;
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        loopBusy = false;
+      }
+    }
+
+    async function init() {
+      if (initStarted) return;
+      if (!apiReady()) {
+        setTimeout(init, 300);
+        return;
+      }
+      initStarted = true;
+      try {
+        const cfg = await pywebview.api.get_config();
+        lastConfig = cfg || {};
+        CLIENT_IDS.forEach(i => {
+          const cc = lastConfig[`c${i}`] || {};
+          const modelPath = cc.model_yolu || lastConfig.model_yolu || '';
+          const mdl = document.getElementById(`mdl${i}`);
+          if (mdl) mdl.innerHTML = `<option>${escapeHtml(modelFileName(modelPath))}</option>`;
+          const dbg = document.getElementById(`dbg${i}`);
+          if (dbg) dbg.checked = cc.debug_on !== false;
+          syncHeaderClientToggle(i, cc.aktif !== false);
+        });
+        syncCaptchaGlobal(lastConfig);
+        syncGlobalAdvanced(lastConfig);
+        await refreshAllWins(true);
+        await loop();
+        setInterval(loop, 500);
+      } catch (err) {
+        console.error(err);
+        toast('Başlatma hatası');
+      }
+    }
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'F5') {
+        event.preventDefault();
+        toggleBot();
+      }
+    });
+
+    window.addEventListener('pywebviewready', init);
+    setTimeout(init, 500);
+  </script>
+</body>
+
+</html>

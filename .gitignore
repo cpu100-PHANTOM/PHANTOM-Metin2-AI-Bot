@@ -1,0 +1,18 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Runtime logs and captures
+runtime/logs/
+runtime/captcha_kontrol/
+
+# User-specific config (generated at first run)
+config_phantom.json
+
+# Windows
+*.dll
+
+# IDE
+.vscode/
+.idea/
