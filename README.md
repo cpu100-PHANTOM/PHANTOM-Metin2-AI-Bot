@@ -269,19 +269,49 @@ Kısayol:
 
 ## Interception ve Girdi Sistemi
 
-PHANTOM iki seviyeli girdi sistemi kullanır:
+PHANTOM, Windows girdi katmanında iki seviye kullanır:
 
-1. `Interception`: `interception.dll` bulunur ve sistemde kullanılabilir context oluşursa devreye girer.
-2. `SendInput`: Interception kullanılamazsa otomatik fallback olarak kullanılır.
+1. **Interception**: Düşük seviyeli mouse/klavye sürücüsü. Sistemde yüklüyse aktif olur.
+2. **SendInput**: Windows API varsayılan yöntemi. Interception yoksa otomatik devreye girer.
 
-Bu tasarım sayesinde Interception hazır olmayan bilgisayarlarda uygulama hata verip kapanmaz; SendInput ile çalışmaya devam eder.
+Bu tasarım sayesinde Interception kurulu olmayan bilgisayarlarda bot hata vermeden SendInput ile çalışmaya devam eder.
 
-### Interception Ne Sağlar?
+### Interception Kurulumu (Önerilir)
 
-- Daha düşük seviyeli mouse ve klavye event gönderimi sağlar.
-- Mouse hareketi, sol tık, sağ tık ve bazı klavye basışlarında kullanılabilir.
-- Klavye cihazı bulunursa `Z`, `Ctrl+V`, `Enter` gibi basışlarda da kullanılabilir.
-- Çok monitör senaryolarında absolute mouse koordinatı için virtual desktop bayrağı kullanılır.
+Interception, daha kararlı ve düşük seviyeli girdi sağlar. Kurulum tek seferliktir:
+
+1. **Kurulum dosyasını çalıştırın:**
+   ```text
+   lib/interception/install-interception.exe
+   ```
+   Bu dosya Interception sürücüsünü sisteme yükler. **Yönetici izni gerekir.**
+
+2. **Bilgisayarı yeniden başlatın.**
+   Sürücünün aktif olması için restart şarttır.
+
+3. **Botu başlatın.**
+   Açılış loglarında `Interception hazir` görürseniz kurulum başarılıdır.
+
+> **Not:** `install-interception.exe` yalnızca Windows sürücü katmanına bir filter driver yükler; arka planda çalışan bir uygulama değildir. Kaldırmak isterseniz aynı `.exe`'yi tekrar çalıştırabilirsiniz.
+
+### İlgili Dosyalar
+
+| Dosya | Açıklama |
+| --- | --- |
+| `interception.dll` | **(Kök dizin)** Botun çalışma zamanında doğrudan yüklediği `x64` kütüphane. |
+| `lib/interception/install-interception.exe` | Sürücüyü sisteme yükleyen resmi komut satırı kurulum aracı. |
+| `lib/interception/x64/interception.dll` | 64-bit kütüphane (kökteki ile aynı). |
+| `lib/interception/x86/interception.dll` | 32-bit kütüphane (nadir durumlar için). |
+| `lib/interception/interception.h` | C/C++ header dosyası. |
+| `lib/interception/LICENSE.txt` | LGPL 3.0 lisansı. |
+
+### Hangi DLL Kullanılıyor?
+
+Bot çalıştığında önce proje **kökündeki** `interception.dll`'yi dener. Bu dosya `x64` sürümüdür ve modern Windows 10/11 sistemler için uygundur.
+
+Eğer çok nadir de olsa 32-bit (x86) bir sistemde çalıştırırsanız, `lib/interception/x86/interception.dll` dosyasını proje köküne `interception.dll` adıyla kopyalayabilirsiniz.
+
+> **Önemli:** `.gitignore` dosyası, kök dizindeki `interception.dll` ve `lib/interception/` altındaki kütüphane dosyaları için istisna tanımlıdır. Projeyi Git veya ZIP ile başka PC'ye taşırken bu dosyaların da gittiğinden emin olun.
 
 ### Interception Hazır Değilse Ne Olur?
 
@@ -289,11 +319,7 @@ Bot otomatik olarak SendInput moduna düşer. Bu durumda:
 
 - Mouse hareketi Windows `SetCursorPos` ve `SendInput` ile yapılır.
 - Klavye basışları `keyboard` paketi üzerinden gönderilir.
-- Arayüzde ve loglarda `Interception bulunamadi` / `SendInput` bilgileri görülebilir.
-
-### Paketleme Notu
-
-`interception.dll` proje kökünde bulunmalıdır. `.gitignore` içinde bu dosya için istisna tanımlıdır. Projeyi Git veya ZIP ile başka PC’ye taşırken bu dosyanın da gittiğinden emin olun.
+- Arayüzde ve loglarda `Interception bulunamadi` / `Tiklama modu: SendInput` benzeri kayıtlar görülebilir.
 
 ---
 
@@ -363,6 +389,15 @@ PHANTOM_BOT/
 ├─ interception.dll
 ├─ index.html
 ├─ config_phantom.json
+├─ lib/
+│  └─ interception/
+│     ├─ install-interception.exe
+│     ├─ interception.h
+│     ├─ x64/
+│     │  └─ interception.dll
+│     ├─ x86/
+│     │  └─ interception.dll
+│     └─ LICENSE.txt
 ├─ models/
 │  ├─ Büyülü_metni.pt
 │  ├─ Guatama_metni.pt
@@ -391,12 +426,14 @@ PHANTOM_BOT/
 
 ### Ana Dosyalar
 
-| Dosya | Rol |
+| Dosya / Klasör | Rol |
 | --- | --- |
 | `PHANTOM.bat` | Yönetici yetkisi ister, `.venv` yoksa kurulum yapar, botu başlatır. |
 | `kurulum.bat` | Tek tık kurulum dosyasıdır. Python, `.venv`, paketler ve WebView2 kontrolünü yapar. |
 | `metin_bot_webview.py` | Eski giriş noktasını koruyan launcher dosyasıdır. |
 | `index.html` | PyWebView içinde çalışan arayüzdür. |
+| `interception.dll` | Çalışma zamanında yüklenen Interception kütüphanesi (`x64`). |
+| `lib/interception/` | Interception sürücü kurulum aracı, `x86`/`x64` kütüphaneleri ve lisans dosyası. |
 | `src/phantom/app/main.py` | Ana uygulama, state, thread’ler, API ve otomasyon akışı. |
 | `src/phantom/captcha/solver.py` | CAPTCHA ve OCR çözüm motoru. |
 | `config_phantom.json` | Kullanıcı ayarlarını tutar. |
