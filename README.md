@@ -58,7 +58,7 @@ Projenin hedefi, başka bir Windows bilgisayarda da minimum manuel işlemle çal
 | HP Panel Seçimi | Botun savaşta mı, aramada mı olduğunu anlamasının ana sinyalidir. | İlk kurulumdan sonra her client için mutlaka seçilmelidir. |
 | Canlı Debug Görüntüsü | Modelin ne gördüğünü, HP kutusunu ve hedef merkezini anında gösterir. | Yanlış tıklama, model görmeme veya HP algılama sorunlarında ilk bakılacak yerdir. |
 | Interception / SendInput Katmanı | Girdi gönderimini otomatik olarak uygun yöntemle yapar. | Interception kullanılabiliyorsa daha düşük seviyeli input yolu devreye girer; yoksa SendInput ile çalışmaya devam eder. |
-| Mesaj Koruması | Mesaj penceresi veya bildirim algılanınca farm akışını durdurup cevap göndermeye çalışır. | Uzun süreli kullanımda beklenmeyen mesaj pencereleri için faydalıdır. |
+| Mesaj Koruması | Mesaj penceresi veya bildirim algılanınca kısa süre işlem önceliğini mesaja verip cevap göndermeye çalışır. | Uzun süreli kullanımda beklenmeyen mesaj pencereleri için faydalıdır. |
 | Kurulum BAT Akışı | Python, sanal ortam, Torch, WebView2 ve paket kontrollerini tek dosyada toplar. | Projeyi başka PC’ye taşırken en kritik yardımcıdır. |
 | Log Sistemi | Kurulum ve çalışma zamanı olaylarını dosyaya yazar. | Kullanıcı destek verirken “bende çalışmıyor” durumunu somut hataya çevirir. |
 
@@ -117,9 +117,9 @@ Hedef Kuyruğu, özellikle seri hedef kesme akışında en yararlı otomasyon mo
 
 ### Mesaj Koruması
 
-- Mesaj bildirimi veya mesaj penceresi algılanırsa farm akışı global olarak duraklatılır.
+- Mesaj bildirimi veya mesaj penceresi algılanırsa bot kısa süre mesaj işlemine öncelik verir.
 - Bot kısa cevaplardan birini seçerek yanıt göndermeye çalışır.
-- Yanıt sonrası ilgili client için farm kısa süre duraklatılır.
+- Yanıt sonrası ilgili client için ayrıca farm bekleme süresi uygulanmaz.
 - Kendi gönderdiği mesajları tekrar gelen mesaj sanmamak için basit benzerlik ve geçmiş kontrolü kullanılır.
 
 ### CAPTCHA Modülleri
@@ -135,8 +135,11 @@ CAPTCHA sistemi EasyOCR kullanır. OCR ilk açılışta model dosyalarını indi
 
 ### Loglar ve İstatistik
 
-- Arayüzde `Loglar` sekmesi vardır.
-- Loglar temizlenebilir veya panoya kopyalanabilir.
+- Arayüzde `Loglar` sekmesi terminal gibi çalışır.
+- Bot logları, `runtime/logs` altındaki stdout/stderr çıktıları ve terminal komut çıktıları aynı panelde görünür.
+- Komut satırına `dir`, `python --version`, `pip show ultralytics` gibi komutlar yazılabilir.
+- PowerShell komutları için `powershell -Command "Get-FileHash README.md"` formatı kullanılabilir.
+- Terminal çıktısı temizlenebilir veya panoya kopyalanabilir.
 - Kurulum logları `runtime/logs/kurulum_*.log` dosyalarına yazılır.
 - Çalışma logları `runtime/logs/events_*.jsonl` dosyalarına yazılır.
 - Client bazlı toplam kill ve süre bilgisi `Ayarlar` sekmesinde görüntülenir.
@@ -222,15 +225,63 @@ Kısayol:
 
 ## İlk Kullanım Akışı
 
-1. `kurulum.bat` dosyasını çalıştırın.
-2. Kurulum bittikten sonra `PHANTOM.bat` dosyasını açın.
-3. `İstemciler` sekmesinde `Client 1` için model seçin.
-4. `Pencere` listesinden oyun penceresini seçin.
-5. `HP Panel` düğmesiyle HP bar alanını ekrandan seçin.
-6. Gerekirse aynı işlemleri `Client 2` için de yapın.
-7. `Ayarlar` sekmesinden Oto Loot, Hedef Kuyruğu, Kurtarma ve CAPTCHA durumunu ayarlayın.
-8. Debug görüntüsünde hedef ve HP kutularının doğru göründüğünü kontrol edin.
-9. `Başlat` düğmesine veya `F5` tuşuna basın.
+Bu bölüm kurulum bittikten sonra botun ilk kez nasıl hazırlanacağını anlatır. İlk denemede yalnızca `Client 1` ile başlayın; her şey doğru çalıştıktan sonra aynı adımları `Client 2` için de uygulayın.
+
+### 1. Oyunu ve Botu Açın
+
+1. Metin2 client'ını açın ve oyuna karakterinizle giriş yapın.
+2. Oyun penceresini minimize etmeyin; bot ekran görüntüsünü açık pencereden alır.
+3. Proje klasöründeki `PHANTOM.bat` dosyasını çalıştırın. Yönetici izni isterse onaylayın.
+
+### 2. Model Seçin
+
+1. `İstemciler` sekmesinde `Client 1` panelindeki `Model` satırında bulunan seçim düğmesine basın.
+2. Dosya seçme penceresinde proje içindeki `models/` klasörüne gidin.
+3. Keseceğiniz metin tipine uygun `.pt` modelini seçin:
+
+| Model dosyası | Kullanım amacı |
+| --- | --- |
+| `models/Büyülü_metni.pt` | Büyülü metin hedefleri için |
+| `models/Guatama_metni.pt` | Guatama metni hedefleri için |
+| `models/Gölge_metni.pt` | Gölge metni hedefleri için |
+| `models/Kızıl_metni.pt` | Kızıl metin hedefleri için |
+
+Yanlış model seçilirse bot hedefi hiç göremeyebilir veya yanlış yerlere tıklayabilir. Kendi eğittiğiniz model varsa `.pt` dosyasını `models/` klasörüne koyup aynı yerden seçebilirsiniz.
+
+### 3. Oyun Penceresini Seçin
+
+1. `Pencere` açılır listesinden otomasyon yapılacak Metin2 client penceresini seçin.
+2. Pencere listede yoksa oyun açık ve görünür durumdayken `Pencere` satırındaki yenile düğmesine basın.
+3. İki client kullanıyorsanız `Client 1` ve `Client 2` için farklı oyun pencereleri seçin. İki panelde aynı pencere seçilirse bot iki client'ı aynı ekran sanır.
+
+### 4. HP Panel Alanını Seçin
+
+HP Panel seçimi botun savaşta olup olmadığını anlaması için kritik adımdır. Bu seçim karakterin kendi HP/MP barı değildir; hedefe tıklayınca üst tarafta çıkan hedef/metin HP barıdır.
+
+1. Oyunda bir metne veya hedefe bir kez tıklayın, üst tarafta hedef adı ve HP barı görünsün.
+2. Bot arayüzünde ilgili client için `HP Panel` düğmesine basın.
+3. `HP Bar Sec` adlı seçim penceresi açılır.
+4. Fareyle yalnızca üst tarafta görünen hedef/metin HP barını çerçeve içine alın.
+5. Seçime metin adını, ikonları, boş alanları, karakter HP/MP barını veya oyun arayüzünün başka parçalarını dahil etmeyin.
+6. Çerçeveyi mümkün olduğunca dar tutun; sadece HP barın dolu/kırmızı bölümünü ve sabit bar alanını kapsaması en sağlıklı sonuç verir.
+7. Seçimi onaylamak için `Enter` veya `Space` tuşuna basın. Yanlış seçtiyseniz `Esc` ile iptal edip `HP Panel` düğmesine tekrar basın.
+
+Seçim tamamlanınca bot bu görüntüyü `templates/hp_templates/client_1.png` veya `client_2.png` olarak kaydeder. Oyun çözünürlüğünü, pencere boyutunu, arayüz ölçeğini veya server/client görünümünü değiştirirseniz HP panelini yeniden seçin.
+
+### 5. Ayarları Kontrol Edin
+
+1. İlk denemede `Captcha Tipi` seçeneğini `Kapalı` bırakın.
+2. Hedef öldükten sonra yerdeki itemleri toplamasını istiyorsanız `Oto Loot` açık olmalı.
+3. Yoğun hedef bulunan alanlarda seri farm için `Hedef Kuyruğu` açılabilir.
+4. Karakter sıkışırsa otomatik çıkış denemesi için `Kurtarma` açık bırakılabilir.
+5. Mesaj geldiğinde botun otomatik cevap denemesini istiyorsanız `Mesaj Koruması` açık olmalı.
+
+### 6. Başlatın ve Debug Görüntüsünü Kontrol Edin
+
+1. `Başlat` düğmesine veya `F5` tuşuna basın.
+2. Canlı debug görüntüsünde hedeflerin üzerinde yeşil kutular görünmeli.
+3. HP panel alanı doğru yerde görünmeli; HP algılanıyorsa kutu yeşile döner, algılanmıyorsa kırmızı kalır.
+4. Hedef kutuları çıkmıyorsa model seçimini, HP görünmüyorsa HP Panel seçimini, görüntü gelmiyorsa pencere seçimini kontrol edin.
 
 ---
 
@@ -242,7 +293,7 @@ Kısayol:
 | --- | --- |
 | Model | Client için kullanılacak `.pt` YOLO modelini seçer. |
 | Pencere | Otomasyon yapılacak oyun penceresini seçer. |
-| HP Panel | HP bar bölgesini seçmek için ekran üzerinden ROI seçimi açar. |
+| HP Panel | Hedefe/metne tıklayınca üstte çıkan hedef HP barını seçmek için ekran üzerinden ROI seçimi açar. Karakterin kendi HP/MP barı seçilmemelidir. |
 | Canlı Görüntü | Debug feed üzerinde model çıktısını, merkez çizgisini ve HP alanını gösterir. |
 | Debug | Görüntü encode ve arayüz feed maliyetini açar/kapatır. |
 | C1/C2 ON-OFF | Client’ın aktif olup olmayacağını belirler. |
@@ -252,7 +303,7 @@ Kısayol:
 | Alan | Açıklama |
 | --- | --- |
 | Captcha Tipi | CAPTCHA solver modunu seçer. Varsayılan: `Kapalı`. |
-| Mesaj Koruması | Mesaj algılama ve otomatik cevap sistemini açar/kapatır. |
+| Mesaj Koruması | Mesaj algılama ve otomatik cevap sistemini açar/kapatır; cevap sonrası farm bekleme süresi uygulamaz. |
 | Kurtarma | Takılma ve hareketsizlik kurtarma manevralarını açar/kapatır. |
 | Oto Loot | Hedef öldüğünde loot toplama basışlarını açar/kapatır. |
 | Hedef Kuyruğu | Seri hedef akışı için sıradaki hedefi hazırlayan modu açar/kapatır. |
@@ -263,8 +314,10 @@ Kısayol:
 
 | Alan | Açıklama |
 | --- | --- |
-| Temizle | Arayüzde görünen logları temizler; dosyadaki logları silmez. |
-| Kopyala | Görünen logları panoya kopyalar. |
+| Terminal | Bot loglarını, Python stdout/stderr dosyalarını ve çalıştırılan komut çıktılarını gösterir. |
+| Komut satırı | Proje kökünde Windows `cmd` komutu çalıştırır. Örnek: `dir`, `python --version`, `pip show torch`. |
+| Temizle | Arayüzde görünen terminal çıktısını temizler; dosyadaki logları silmez. |
+| Kopyala | Görünen terminal çıktısını panoya kopyalar. |
 
 ---
 
@@ -350,7 +403,7 @@ CAPTCHA sistemi `src/phantom/captcha/solver.py` içinde yer alır ve `CaptchaWat
 - Mesaj bildirimi veya açık mesaj penceresi aranır.
 - Sarı mesaj satırları OCR ile okunabilir.
 - Kısa ve bağlama göre seçilen cevaplar gönderilir.
-- Mesaj cevaplandıktan sonra farm kısa süre duraklatılır.
+- Mesaj cevaplandıktan sonra farm bekleme süresi uygulanmaz.
 - CAPTCHA aktifse mesaj işlemi CAPTCHA bekleme durumuna saygı gösterir.
 
 ---

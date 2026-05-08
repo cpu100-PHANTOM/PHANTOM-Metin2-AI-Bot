@@ -1,5 +1,6 @@
 ﻿"""PHANTOM v6 â€” Metin2 AI Bot (Tam Yeniden YapÄ±landÄ±rma)"""
 import os
+import sys
 import time
 import json
 import copy
@@ -10,6 +11,8 @@ import threading
 import re
 import difflib
 import unicodedata
+import glob
+import subprocess
 from collections import deque
 
 import cv2
@@ -63,7 +66,7 @@ MESSAGE_SELF_NAME_PREFIXES = ("vespa",)
 MESSAGE_SELF_ECHO_SECONDS = 3.0
 MESSAGE_SELF_ECHO_SIMILARITY = 0.74
 MESSAGE_OCR_MIN_CONF = 0.20
-MESSAGE_FARM_PAUSE_SECONDS = 300.0
+MESSAGE_FARM_PAUSE_SECONDS = 0.0
 LOOT_BURST_TAPS = 6
 LOOT_TAP_INTERVAL = 0.08
 LOOT_POST_KILL_DELAY = 0.12
@@ -392,15 +395,44 @@ def _ik_ctrl_tap(key_scancode, delay=0.05):
     time.sleep(0.03)
     _ik_send(_SC['ctrl'], _IKUP)
 
+def _virtual_screen_rect():
+    vx = ctypes.windll.user32.GetSystemMetrics(76)  # SM_XVIRTUALSCREEN
+    vy = ctypes.windll.user32.GetSystemMetrics(77)  # SM_YVIRTUALSCREEN
+    vw = ctypes.windll.user32.GetSystemMetrics(78)  # SM_CXVIRTUALSCREEN
+    vh = ctypes.windll.user32.GetSystemMetrics(79)  # SM_CYVIRTUALSCREEN
+    if vw <= 0 or vh <= 0:
+        vx, vy = 0, 0
+        vw = ctypes.windll.user32.GetSystemMetrics(0)
+        vh = ctypes.windll.user32.GetSystemMetrics(1)
+    return vx, vy, vw, vh
+
+def _interception_abs_coords(px, py):
+    vx, vy, vw, vh = _virtual_screen_rect()
+    nx = int((int(px) - vx) * 65535 / max(vw - 1, 1))
+    ny = int((int(py) - vy) * 65535 / max(vh - 1, 1))
+    return max(0, min(65535, nx)), max(0, min(65535, ny))
+
+def _cursor_near(x, y, tolerance=25):
+    try:
+        cx, cy = win32api.GetCursorPos()
+        return np.hypot(cx - int(x), cy - int(y)) <= tolerance
+    except Exception:
+        return True
+
+def _interception_send_mouse(stroke):
+    if not _ilib or not _icx:
+        return False
+    try:
+        return _ilib.interception_send(_icx, _idev, ctypes.byref(stroke), 1) > 0
+    except Exception:
+        return False
+
 def _sol_tik_interception(x, y):
-    sw = ctypes.windll.user32.GetSystemMetrics(0)
-    sh = ctypes.windll.user32.GetSystemMetrics(1)
 
     def _move(px, py):
-        nx = int(px * 65535 / max(sw - 1, 1))
-        ny = int(py * 65535 / max(sh - 1, 1))
+        nx, ny = _interception_abs_coords(px, py)
         s = _IMouseStroke(state=0, flags=_IMABS | _IMVD, rolling=0, x=nx, y=ny, information=0)
-        _ilib.interception_send(_icx, _idev, ctypes.byref(s), 1)
+        return _interception_send_mouse(s)
 
     bx, by = win32api.GetCursorPos()
     dist = np.hypot(x - bx, y - by)
@@ -408,15 +440,18 @@ def _sol_tik_interception(x, y):
         steps = max(10, min(int(dist / 20), 55))
         for i in range(steps):
             t = 1 - (1 - i / steps) ** 2
-            _move(int(bx + (x - bx) * t), int(by + (y - by) * t))
+            if not _move(int(bx + (x - bx) * t), int(by + (y - by) * t)):
+                return False
             time.sleep(random.uniform(0.002, 0.005))
-    _move(int(x), int(y))
+    if not _move(int(x), int(y)):
+        return False
     time.sleep(random.uniform(0.08, 0.12))
-    _ilib.interception_send(_icx, _idev, ctypes.byref(
-        _IMouseStroke(state=_IMDN, flags=0, rolling=0, x=0, y=0, information=0)), 1)
+    if not _cursor_near(x, y):
+        return False
+    if not _interception_send_mouse(_IMouseStroke(state=_IMDN, flags=0, rolling=0, x=0, y=0, information=0)):
+        return False
     time.sleep(random.uniform(0.06, 0.10))
-    _ilib.interception_send(_icx, _idev, ctypes.byref(
-        _IMouseStroke(state=_IMUP, flags=0, rolling=0, x=0, y=0, information=0)), 1)
+    return _interception_send_mouse(_IMouseStroke(state=_IMUP, flags=0, rolling=0, x=0, y=0, information=0))
 
 def _sag_tik_sendinput(x, y):
     bx, by = win32api.GetCursorPos()
@@ -434,14 +469,11 @@ def _sag_tik_sendinput(x, y):
     _send_mouse(0x0010)  # RIGHTUP
 
 def _sag_tik_interception(x, y):
-    sw = ctypes.windll.user32.GetSystemMetrics(0)
-    sh = ctypes.windll.user32.GetSystemMetrics(1)
 
     def _move(px, py):
-        nx = int(px * 65535 / max(sw - 1, 1))
-        ny = int(py * 65535 / max(sh - 1, 1))
+        nx, ny = _interception_abs_coords(px, py)
         s = _IMouseStroke(state=0, flags=_IMABS | _IMVD, rolling=0, x=nx, y=ny, information=0)
-        _ilib.interception_send(_icx, _idev, ctypes.byref(s), 1)
+        return _interception_send_mouse(s)
 
     bx, by = win32api.GetCursorPos()
     dist = np.hypot(x - bx, y - by)
@@ -449,27 +481,33 @@ def _sag_tik_interception(x, y):
         steps = max(10, min(int(dist / 20), 55))
         for i in range(steps):
             t = 1 - (1 - i / steps) ** 2
-            _move(int(bx + (x - bx) * t), int(by + (y - by) * t))
+            if not _move(int(bx + (x - bx) * t), int(by + (y - by) * t)):
+                return False
             time.sleep(random.uniform(0.002, 0.005))
-    _move(int(x), int(y))
+    if not _move(int(x), int(y)):
+        return False
     time.sleep(random.uniform(0.08, 0.12))
-    _ilib.interception_send(_icx, _idev, ctypes.byref(
-        _IMouseStroke(state=_IMRDN, flags=0, rolling=0, x=0, y=0, information=0)), 1)
+    if not _cursor_near(x, y):
+        return False
+    if not _interception_send_mouse(_IMouseStroke(state=_IMRDN, flags=0, rolling=0, x=0, y=0, information=0)):
+        return False
     time.sleep(random.uniform(0.06, 0.10))
-    _ilib.interception_send(_icx, _idev, ctypes.byref(
-        _IMouseStroke(state=_IMRUP, flags=0, rolling=0, x=0, y=0, information=0)), 1)
+    return _interception_send_mouse(_IMouseStroke(state=_IMRUP, flags=0, rolling=0, x=0, y=0, information=0))
 
 _sag_tik_lock = threading.Lock()
 
 def sag_tik_hw(x, y, hwnd=None):
     """SaÄŸ tÄ±k â€” Interception driver yÃ¼klÃ¼yse kernel-level, yoksa SendInput."""
     if not _sag_tik_lock.acquire(blocking=False):
-        return
+        return "blocked"
     try:
         if INTERCEPTION_OK and not _force_sendinput:
-            _sag_tik_interception(x, y)
-        else:
+            if _sag_tik_interception(x, y):
+                return "interception"
             _sag_tik_sendinput(x, y)
+            return "sendinput_fallback"
+        _sag_tik_sendinput(x, y)
+        return "sendinput"
     finally:
         _sag_tik_lock.release()
 
@@ -478,12 +516,15 @@ _force_sendinput = False  # TÄ±klama modu otomatik: Interception varsa kullan�
 def sol_tik_hw(x, y, hwnd=None):
     """Interception driver yÃ¼klÃ¼yse kernel-level tÄ±klama yapar, yoksa SendInput kullanÄ±r."""
     if not sol_tik_lock.acquire(blocking=False):
-        return
+        return "blocked"
     try:
         if INTERCEPTION_OK and not _force_sendinput:
-            _sol_tik_interception(x, y)
-        else:
+            if _sol_tik_interception(x, y):
+                return "interception"
             _sol_tik_sendinput(x, y)
+            return "sendinput_fallback"
+        _sol_tik_sendinput(x, y)
+        return "sendinput"
     finally:
         sol_tik_lock.release()
 
@@ -497,14 +538,17 @@ _shift_tik_lock = threading.Lock()
 def shift_sol_tik_hw(x, y, hwnd=None):
     """Shift+Sol tÄ±k."""
     if not _shift_tik_lock.acquire(blocking=False):
-        return
+        return "blocked"
     try:
         keyboard.press('shift')
         try:
             if INTERCEPTION_OK and not _force_sendinput:
-                _sol_tik_interception(x, y)
-            else:
+                if _sol_tik_interception(x, y):
+                    return "interception"
                 _sol_tik_sendinput(x, y)
+                return "sendinput_fallback"
+            _sol_tik_sendinput(x, y)
+            return "sendinput"
         finally:
             keyboard.release('shift')
     finally:
@@ -513,14 +557,17 @@ def shift_sol_tik_hw(x, y, hwnd=None):
 def shift_sag_tik_hw(x, y, hwnd=None):
     """Shift+SaÄŸ tÄ±k."""
     if not _shift_tik_lock.acquire(blocking=False):
-        return
+        return "blocked"
     try:
         keyboard.press('shift')
         try:
             if INTERCEPTION_OK and not _force_sendinput:
-                _sag_tik_interception(x, y)
-            else:
+                if _sag_tik_interception(x, y):
+                    return "interception"
                 _sag_tik_sendinput(x, y)
+                return "sendinput_fallback"
+            _sag_tik_sendinput(x, y)
+            return "sendinput"
         finally:
             keyboard.release('shift')
     finally:
@@ -530,13 +577,13 @@ def _tiklama_yap(cfg, x, y, hwnd=None):
     """Config'deki tiklama_turu'na gÃ¶re doÄŸru tÄ±klama fonksiyonunu Ã§aÄŸÄ±rÄ±r."""
     turu = cfg.g("tiklama_turu") or "default"
     if turu == "right":
-        sag_tik_hw(x, y, hwnd)
+        return sag_tik_hw(x, y, hwnd)
     elif turu == "shift_left":
-        shift_sol_tik_hw(x, y, hwnd)
+        return shift_sol_tik_hw(x, y, hwnd)
     elif turu == "shift_right":
-        shift_sag_tik_hw(x, y, hwnd)
+        return shift_sag_tik_hw(x, y, hwnd)
     else:  # default / left â€” sol tÄ±k (mevcut davranÄ±ÅŸ)
-        sol_tik_hw(x, y, hwnd)
+        return sol_tik_hw(x, y, hwnd)
 
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 #  Pencere YardÄ±mcÄ±larÄ±
@@ -1152,6 +1199,12 @@ class ActionThread(threading.Thread):
             self._hedef_kuyruk[qkey] = q
         return q
 
+    def _log_click_result(self, w, click_mode):
+        if click_mode == "sendinput_fallback":
+            log_event(self.st, "warn", f"Tiklama fallback: Interception uygulanmadi, SendInput denendi ({w})")
+        elif click_mode == "blocked":
+            log_event(self.st, "warn", f"Tiklama atlandi: input kilitli ({w})")
+
     def _click_hedef_kuyruk_target(self, w, target, hwnd, ox, oy, now, data_ts=0, min_gap=HEDEF_KUYRUK_BATCH_CLICK_GAP, client_idx=None):
         if not target or self._input_blocked(w):
             return False
@@ -1164,7 +1217,7 @@ class ActionThread(threading.Thread):
         if self._input_blocked(w):
             return False
         x, y = self._queue_target_xy(target)
-        _tiklama_yap(self.cfg, x + ox, y + oy, hwnd)
+        self._log_click_result(w, _tiklama_yap(self.cfg, x + ox, y + oy, hwnd))
         click_now = time.time()
         self._hedef_kuyruk_click_t[qkey] = click_now
         self._son_tiklama_t[w] = click_now
@@ -1189,7 +1242,7 @@ class ActionThread(threading.Thread):
             if not self._valid_hedef_kuyruk_target(target):
                 continue
             x, y = self._queue_target_xy(target)
-            _tiklama_yap(self.cfg, x + ox, y + oy, hwnd)
+            self._log_click_result(w, _tiklama_yap(self.cfg, x + ox, y + oy, hwnd))
             clicked += 1
             click_now = time.time()
             self._hedef_kuyruk_click_t[w] = click_now
@@ -1398,7 +1451,7 @@ class ActionThread(threading.Thread):
         self._kilitli_hedef[w] = (float(h[0]), float(h[1]))
 
         pencere_odakla(hwnd)
-        _tiklama_yap(self.cfg, h[0]+ox, h[1]+oy, hwnd)
+        self._log_click_result(w, _tiklama_yap(self.cfg, h[0]+ox, h[1]+oy, hwnd))
         if cc.get("oto_loot", True):
             self._loot_burst(w, hwnd, cc, "hedef sonrasi", taps=1, delay=0.0, set_status=False)
         self._son_tiklama_t[w] = now
@@ -1457,7 +1510,7 @@ class ActionThread(threading.Thread):
                         filtreli = gecerli
                     h = filtreli[np.argmin([np.hypot(m[0]-ecx, m[1]-ecy) for m in filtreli])]
                     pencere_odakla(hwnd)
-                    _tiklama_yap(self.cfg, h[0]+ox, h[1]+oy, hwnd)
+                    self._log_click_result(w, _tiklama_yap(self.cfg, h[0]+ox, h[1]+oy, hwnd))
                     self._mark_anti_sucuk_manevra(w, now, "savas_uzarsa")
                     self._takilma_baslat_t[w] = now
                     self._son_hareket_t[w] = now      # hareketsiz timer sÄ±fÄ±rla
@@ -2657,10 +2710,14 @@ class VisionThread(threading.Thread):
         return _paste_text_and_enter(reply_text or self._choose_message_reply(hwnd or ""), hwnd)
 
     def _set_message_farm_pause(self, ci, pk, seconds=MESSAGE_FARM_PAUSE_SECONDS):
+        if float(seconds or 0) <= 0:
+            with self.st.lk:
+                self.st.message_farm_pause_until.pop(pk, None)
+            return
         until = time.time() + float(seconds)
         with self.st.lk:
             self.st.message_farm_pause_until[pk] = until
-        log_event(self.st, "warn", f"Client {ci} [MESAJ] farm 5 dk duraklatildi")
+        log_event(self.st, "warn", f"Client {ci} [MESAJ] farm {int(seconds)} sn duraklatildi")
 
     def _message_farm_pause_remaining(self, pk, now=None):
         now = now or time.time()
@@ -3192,6 +3249,115 @@ class API:
         self._vt = None; self._at = None
         self._toggle_lock = threading.Lock()
         self._toggle_busy_log_t = 0.0
+        self._terminal_logs = deque(maxlen=800)
+        self._terminal_file_offsets = {}
+        self._terminal_lock = threading.Lock()
+
+    def _append_terminal_log(self, level, message, ts=None):
+        entry = {
+            "ts": ts or time.strftime("%H:%M:%S"),
+            "level": level,
+            "message": str(message or ""),
+            "source": "terminal",
+        }
+        with self._terminal_lock:
+            self._terminal_logs.append(entry)
+        return entry
+
+    def _terminal_log_files(self):
+        patterns = [
+            os.path.join(LOG_DIR, "phantom_stdout_*.log"),
+            os.path.join(LOG_DIR, "phantom_stderr_*.log"),
+            os.path.join(LOG_DIR, "kurulum_*.log"),
+        ]
+        files = []
+        for pattern in patterns:
+            files.extend(glob.glob(pattern))
+        try:
+            stdout_name = getattr(sys.stdout, "name", "")
+            stderr_name = getattr(sys.stderr, "name", "")
+            for name in (stdout_name, stderr_name):
+                if name and isinstance(name, str) and os.path.exists(name):
+                    files.append(name)
+        except Exception:
+            pass
+        unique = sorted(set(files), key=lambda p: os.path.getmtime(p) if os.path.exists(p) else 0)
+        return unique[-6:]
+
+    def _poll_terminal_files(self):
+        for path in self._terminal_log_files():
+            try:
+                size = os.path.getsize(path)
+                offset = self._terminal_file_offsets.get(path)
+                if offset is None:
+                    offset = max(0, size - 12000)
+                if size < offset:
+                    offset = 0
+                if size == offset:
+                    self._terminal_file_offsets[path] = offset
+                    continue
+                with open(path, "r", encoding="utf-8", errors="replace") as f:
+                    f.seek(offset)
+                    lines = f.readlines()
+                    self._terminal_file_offsets[path] = f.tell()
+                source = os.path.basename(path)
+                level = "stderr" if "stderr" in source.lower() else "cmd"
+                for line in lines[-120:]:
+                    text = line.rstrip()
+                    if text:
+                        self._append_terminal_log(level, f"{source}: {text}")
+            except Exception:
+                continue
+
+    def run_terminal_command(self, command):
+        command = str(command or "").strip()
+        if not command:
+            return {"ok": False, "output": ""}
+        if command.lower() in ("cls", "clear"):
+            with self._terminal_lock:
+                self._terminal_logs.clear()
+            return {"ok": True, "cleared": True, "output": ""}
+        self._append_terminal_log("cmd", f"> {command}")
+        try:
+            env = os.environ.copy()
+            exe_dir = os.path.dirname(sys.executable or "")
+            if exe_dir:
+                env["PATH"] = exe_dir + os.pathsep + env.get("PATH", "")
+            env["PYTHONUTF8"] = "1"
+            completed = subprocess.run(
+                command,
+                cwd=PROJECT_ROOT,
+                shell=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=20,
+                env=env,
+            )
+            output = (completed.stdout or "") + (completed.stderr or "")
+            for line in output.splitlines()[-240:]:
+                if line.strip():
+                    self._append_terminal_log("cmd", line)
+            self._append_terminal_log(
+                "cmd",
+                f"[exit {completed.returncode}]",
+            )
+            return {"ok": completed.returncode == 0, "code": completed.returncode, "output": output[-8000:]}
+        except subprocess.TimeoutExpired as e:
+            parts = []
+            for part in (e.stdout, e.stderr):
+                if isinstance(part, bytes):
+                    parts.append(part.decode("utf-8", errors="replace"))
+                elif isinstance(part, str):
+                    parts.append(part)
+            output = "".join(parts)
+            self._append_terminal_log("error", "Komut zaman asimina ugradi (20 sn)")
+            return {"ok": False, "code": -1, "output": output}
+        except Exception as e:
+            self._append_terminal_log("error", f"Komut calistirilamadi: {e}")
+            return {"ok": False, "code": -1, "output": str(e)}
+
     def get_config(self):
         result = dict(self.cfg.d)
         result['interception_ok'] = INTERCEPTION_OK
@@ -3256,6 +3422,7 @@ class API:
                     self._vt._load_hp_templates()
 
     def get_status(self):
+        self._poll_terminal_files()
         with self.st.lk:
             aktif = self.st.aktif
             started_at = self.st.started_at
@@ -3277,7 +3444,9 @@ class API:
 
         with self.st.lk:
             kill_counts = dict(self.st.kill_counts)
-        result = {"aktif":aktif, "started_at":started_at, "cihaz":cihaz, "vision_fps": 0.0, "logs": logs, "global_pause": global_pause, "checklist": {"clients": {}}, "clients":{}}
+        with self._terminal_lock:
+            terminal_logs = list(self._terminal_logs)
+        result = {"aktif":aktif, "started_at":started_at, "cihaz":cihaz, "vision_fps": 0.0, "logs": logs + terminal_logs, "global_pause": global_pause, "checklist": {"clients": {}}, "clients":{}}
         for ci in [1, 2]:
             cc = self.cfg.client(ci)
             pk = cc.get("pencere", "Yok")

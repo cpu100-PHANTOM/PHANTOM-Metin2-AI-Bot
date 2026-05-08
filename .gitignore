@@ -13,6 +13,10 @@ runtime/captcha_kontrol/*
 !runtime/captcha_kontrol/.gitkeep
 runtime/easyocr_models/
 
+# User-specific HP selections
+templates/hp_templates/*
+!templates/hp_templates/.gitkeep
+
 # User-specific config (generated at first run)
 config_phantom.json
 

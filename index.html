@@ -665,7 +665,7 @@
       flex: 1;
       background: var(--bg-app);
       border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
       padding: 12px;
       font-family: var(--font-mono);
       font-size: 11px;
@@ -673,6 +673,7 @@
       overflow-y: auto;
       line-height: 1.6;
       min-height: 150px;
+      white-space: pre-wrap;
     }
 
     .log-line {
@@ -692,13 +693,56 @@
       color: var(--accent-blue);
     }
 
+    .log-type.warn,
+    .log-type.warning {
+      color: var(--accent-yellow);
+    }
+
+    .log-type.error,
+    .log-type.stderr {
+      color: var(--accent-red);
+    }
+
+    .log-type.cmd {
+      color: var(--accent-green);
+    }
+
     .log-type.success {
       color: var(--accent-green);
     }
 
     .log-msg {
       color: var(--text-primary);
-      word-break: break-all;
+      word-break: break-word;
+    }
+
+    .terminal-shell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-top: 0;
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+      font-family: var(--font-mono);
+    }
+
+    .terminal-prompt {
+      color: var(--accent-green);
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .terminal-input {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 11px;
     }
 
     #pageOps {
@@ -1243,14 +1287,19 @@
     <div class="page" id="pageLog">
       <div class="panel" style="height: 100%;">
         <div class="panel-header">
-          <span class="panel-title">Loglar</span>
+          <span class="panel-title">Terminal</span>
           <div style="display:flex; gap:6px;">
             <button class="tab" style="padding: 2px 8px; border: 1px solid var(--border-subtle);" onclick="clearTrm()">Temizle</button>
             <button class="tab" style="padding: 2px 8px; border: 1px solid var(--border-subtle);" onclick="copyTrm()">Kopyala</button>
           </div>
         </div>
-        <div class="panel-body" style="padding:0;">
+        <div class="panel-body" style="padding:0; display:flex; flex-direction:column; min-height:0;">
           <div class="terminal" id="trmList"></div>
+          <div class="terminal-shell">
+            <span class="terminal-prompt">PHANTOM&gt;</span>
+            <input class="terminal-input" id="terminalInput" autocomplete="off" spellcheck="false" placeholder="Komut yaz: dir, python --version, pip show ultralytics, powershell -Command &quot;Get-FileHash README.md&quot;">
+            <button class="tab" style="padding: 3px 10px; border: 1px solid var(--border-subtle);" onclick="runTerminalCommand()">Çalıştır</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1262,6 +1311,8 @@
     let lastConfig = null;
     let _trmLogs = [];
     let _trmClearedCount = 0;
+    let _terminalHistory = [];
+    let _terminalHistoryIndex = 0;
     let loopBusy = false;
     let initStarted = false;
 
@@ -1555,6 +1606,51 @@
       }
     }
 
+    async function runTerminalCommand() {
+      if (!apiReady()) return toast('pywebview API hazır değil');
+      const input = document.getElementById('terminalInput');
+      const command = String(input?.value || '').trim();
+      if (!command) return;
+      if (input) input.value = '';
+      _terminalHistory.push(command);
+      _terminalHistoryIndex = _terminalHistory.length;
+      if (command.toLowerCase() === 'cls' || command.toLowerCase() === 'clear') {
+        _trmClearedCount = 0;
+      }
+      await pywebview.api.run_terminal_command(command);
+      await loop();
+      const el = document.getElementById('trmList');
+      if (el) el.scrollTop = el.scrollHeight;
+    }
+
+    function setupTerminalInput() {
+      const input = document.getElementById('terminalInput');
+      if (!input || input.dataset.ready === '1') return;
+      input.dataset.ready = '1';
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          runTerminalCommand();
+          return;
+        }
+        if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          if (_terminalHistory.length) {
+            _terminalHistoryIndex = Math.max(0, _terminalHistoryIndex - 1);
+            input.value = _terminalHistory[_terminalHistoryIndex] || '';
+          }
+          return;
+        }
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          if (_terminalHistory.length) {
+            _terminalHistoryIndex = Math.min(_terminalHistory.length, _terminalHistoryIndex + 1);
+            input.value = _terminalHistory[_terminalHistoryIndex] || '';
+          }
+        }
+      });
+    }
+
     function renderGlobal(status) {
       updateRunButton(!!status?.aktif);
       const elapsed = status?.started_at ? formatDuration(Date.now() / 1000 - status.started_at) : '00:00';
@@ -1610,6 +1706,7 @@
         return;
       }
       initStarted = true;
+      setupTerminalInput();
       try {
         const cfg = await pywebview.api.get_config();
         lastConfig = cfg || {};
