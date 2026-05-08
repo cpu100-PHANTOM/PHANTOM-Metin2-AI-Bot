@@ -213,6 +213,7 @@ PHANTOM.bat
 
 - Yönetici izni ister.
 - `.venv` yoksa `kurulum.bat /auto` çalıştırır.
+- Taşınmış veya bozulmuş `.venv` algılanırsa `kurulum.bat` ortamı onarmayı dener; olmazsa bozuk ortamı `.venv_bozuk_YYYYMMDD_HHMMSS` olarak yedekleyip yeniden kurar.
 - Kurulum başarılıysa `metin_bot_webview.py` dosyasını `.venv` içindeki Python ile başlatır.
 - Uygulama hata ile kapanırsa terminal penceresini açık bırakır.
 
@@ -579,6 +580,12 @@ Proje kaynak kodları açıktır. Şüphe duyarsanız `src/` klasörünü incele
 2. `.venv\Scripts\python.exe` dosyasının oluştuğunu doğrulayın.
 3. `kurulum.bat` dosyasını tekrar çalıştırın.
 4. WebView2 Runtime kurulumunun tamamlandığından emin olun.
+
+### Başka bilgisayarda `.venv` hatası alınıyor
+
+`.venv` klasörü bilgisayara özeldir; içindeki `pyvenv.cfg` dosyası Python'un kurulu olduğu kullanıcı yolunu tutar. Projeyi başka bir bilgisayara gönderirken `.venv`, `runtime/` logları ve kişisel config dosyalarını göndermeyin. Yeni bilgisayarda `kurulum.bat` çalıştırıldığında ortam o bilgisayara göre yeniden oluşturulur.
+
+`No Python at ...` veya kullanıcı adında `?` görünen bir hata varsa `kurulum.bat` yeni sürümde `.venv` yapılandırmasını UTF-8 olarak onarmayı dener. Onarım yetmezse bozuk ortamı `.venv_bozuk_YYYYMMDD_HHMMSS` adıyla yedekleyip temiz `.venv` kurar.
 
 ### Kurulum Torch aşamasında uzun sürüyor
 

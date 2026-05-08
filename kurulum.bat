@@ -18,6 +18,7 @@ set "FULL_DEPS_CHECK=import certifi, cv2, easyocr, keyboard, mss, numpy, torch, 
 set "EASYOCR_CACHE_CHECK=from src.phantom.captcha.solver import _easyocr_models_ready; raise SystemExit(0 if _easyocr_models_ready() else 1)"
 set "AUTO_MODE=0"
 if /i "%~1"=="/auto" set "AUTO_MODE=1"
+set "PYTHONUTF8=1"
 
 if not exist "runtime\logs" mkdir "runtime\logs" >nul 2>&1
 for /f "delims=" %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss" 2^>nul') do set "STAMP=%%T"
@@ -50,21 +51,8 @@ if not defined PYTHON_EXE (
 echo [OK] Python bulundu: %PYTHON_EXE%
 echo [OK] Python bulundu: %PYTHON_EXE% >> "%LOG_FILE%"
 
-if not exist "%VENV_PY%" (
-    echo.
-    echo [INFO] Proje sanal ortami olusturuluyor: .venv
-    call :run "%PYTHON_EXE%" -m venv --system-site-packages "%VENV_DIR%"
-    if errorlevel 1 goto fail
-) else (
-    echo [OK] Sanal ortam zaten var: .venv
-    echo [OK] Sanal ortam zaten var: .venv >> "%LOG_FILE%"
-)
-
-if not exist "%VENV_PY%" (
-    echo [HATA] .venv olusturuldu ama Python bulunamadi.
-    echo [HATA] .venv olusturuldu ama Python bulunamadi. >> "%LOG_FILE%"
-    goto fail
-)
+call :ensure_venv
+if errorlevel 1 goto fail
 
 echo.
 call :enable_system_site_packages
@@ -132,6 +120,55 @@ echo [BASARILI] Kurulum tamamlandi. >> "%LOG_FILE%"
 if "%AUTO_MODE%"=="0" pause
 exit /b 0
 
+:ensure_venv
+if exist "%VENV_PY%" (
+    "%VENV_PY%" -c "import sys" >nul 2>&1
+    if not errorlevel 1 (
+        echo [OK] Sanal ortam zaten var: .venv
+        echo [OK] Sanal ortam zaten var: .venv >> "%LOG_FILE%"
+        exit /b 0
+    )
+
+    echo [UYARI] Mevcut .venv acilamiyor. Sanal ortam yapilandirmasi onariliyor...
+    echo [UYARI] Mevcut .venv acilamiyor. Onarim deneniyor. >> "%LOG_FILE%"
+    call :repair_venv_config
+    "%VENV_PY%" -c "import sys" >nul 2>&1
+    if not errorlevel 1 (
+        echo [OK] Sanal ortam onarildi.
+        echo [OK] Sanal ortam onarildi. >> "%LOG_FILE%"
+        exit /b 0
+    )
+
+    set "BROKEN_VENV=%CD%\.venv_bozuk_%STAMP%"
+    echo [UYARI] .venv onarilamadi. Bozuk ortam yedekleniyor: .venv_bozuk_%STAMP%
+    echo [UYARI] .venv onarilamadi. Bozuk ortam yedekleniyor: .venv_bozuk_%STAMP% >> "%LOG_FILE%"
+    move /Y "%VENV_DIR%" "%BROKEN_VENV%" >> "%LOG_FILE%" 2>&1
+    if errorlevel 1 (
+        echo [HATA] Bozuk .venv tasinamadi. Programlari kapatip .venv klasorunu silin ve tekrar deneyin.
+        echo [HATA] Bozuk .venv tasinamadi. >> "%LOG_FILE%"
+        exit /b 1
+    )
+)
+
+echo.
+echo [INFO] Proje sanal ortami olusturuluyor: .venv
+call :run "%PYTHON_EXE%" -m venv --system-site-packages "%VENV_DIR%"
+if errorlevel 1 exit /b 1
+
+if not exist "%VENV_PY%" (
+    echo [HATA] .venv olusturuldu ama Python bulunamadi.
+    echo [HATA] .venv olusturuldu ama Python bulunamadi. >> "%LOG_FILE%"
+    exit /b 1
+)
+
+"%VENV_PY%" -c "import sys" >nul 2>&1
+if errorlevel 1 (
+    echo [HATA] .venv olusturuldu ama acilamadi. Kullanici yolu veya Python kurulumu sorunlu olabilir.
+    echo [HATA] .venv olusturuldu ama acilamadi. >> "%LOG_FILE%"
+    exit /b 1
+)
+exit /b 0
+
 :find_python
 set "PYTHON_EXE="
 if exist "%LocalAppData%\Programs\Python\Python311\python.exe" (
@@ -176,9 +213,16 @@ if not "%PY_INSTALL_EXIT%"=="0" (
 )
 exit /b 0
 
+:repair_venv_config
+if not exist "%VENV_DIR%\pyvenv.cfg" exit /b 1
+for %%D in ("%PYTHON_EXE%") do set "PYTHON_HOME=%%~dpD"
+if not defined PYTHON_HOME exit /b 1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $cfg=Join-Path $env:VENV_DIR 'pyvenv.cfg'; $pyhome=$env:PYTHON_HOME.TrimEnd('\'); $exe=$env:PYTHON_EXE; $q=[char]34; $cmd=$q+$exe+$q+' -m venv --system-site-packages '+$q+$env:VENV_DIR+$q; $lines=@(); if(Test-Path $cfg){ $lines=[IO.File]::ReadAllLines($cfg) }; $map=[ordered]@{home=$pyhome; executable=$exe; command=$cmd}; foreach($k in @($map.Keys)){ $found=$false; for($i=0; $i -lt $lines.Count; $i++){ if($lines[$i] -match ('^'+[regex]::Escape($k)+'\s*=')){ $lines[$i]=('{0} = {1}' -f $k,$map[$k]); $found=$true; break } }; if(-not $found){ $lines += ('{0} = {1}' -f $k,$map[$k]) } }; $utf8=New-Object System.Text.UTF8Encoding($false); [IO.File]::WriteAllLines($cfg,$lines,$utf8)" >> "%LOG_FILE%" 2>&1
+exit /b %ERRORLEVEL%
+
 :enable_system_site_packages
 if not exist "%VENV_DIR%\pyvenv.cfg" exit /b 0
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$p='%VENV_DIR%\pyvenv.cfg'; $c=[IO.File]::ReadAllText($p); if($c -match '(?m)^include-system-site-packages\s*='){$c=[regex]::Replace($c,'(?m)^include-system-site-packages\s*=.*$','include-system-site-packages = true')}else{$c=$c.TrimEnd()+[Environment]::NewLine+'include-system-site-packages = true'+[Environment]::NewLine}; [IO.File]::WriteAllText($p,$c,[Text.Encoding]::ASCII)" >> "%LOG_FILE%" 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$p=Join-Path $env:VENV_DIR 'pyvenv.cfg'; $c=[IO.File]::ReadAllText($p); if($c -match '(?m)^include-system-site-packages\s*='){$c=[regex]::Replace($c,'(?m)^include-system-site-packages\s*=.*$','include-system-site-packages = true')}else{$c=$c.TrimEnd()+[Environment]::NewLine+'include-system-site-packages = true'+[Environment]::NewLine}; $utf8=New-Object System.Text.UTF8Encoding($false); [IO.File]::WriteAllText($p,$c,$utf8)" >> "%LOG_FILE%" 2>&1
 if errorlevel 1 (
     echo [UYARI] Sanal ortama sistem paket yolu eklenemedi; kurulum yerel paketlerle devam edecek.
     echo [UYARI] Sanal ortama sistem paket yolu eklenemedi. >> "%LOG_FILE%"
