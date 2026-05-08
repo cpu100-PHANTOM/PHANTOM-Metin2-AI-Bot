@@ -888,7 +888,7 @@ class ActionThread(threading.Thread):
         with self.st.lk:
             if self._stop_event.is_set() or not self.st.aktif:
                 return True
-            if self.st.global_pause_active or self.st.captcha_global_active or self.st.message_global_active:
+            if w is not None and self.st.captcha_block.get(w, False):
                 return True
         return False
 
@@ -1638,9 +1638,6 @@ class ActionThread(threading.Thread):
                 self._hedef_kuyruk.clear()
                 continue
 
-            if message_global_active or captcha_global_active:
-                self._hedef_kuyruk.clear()
-
             ordered_wd = []
             seen_w = set()
             for ci in (1, 2):
@@ -1662,20 +1659,6 @@ class ActionThread(threading.Thread):
                     if w in self._hedef_kuyruk:
                         self._clear_hedef_kuyruk(w)
                         log_event(self.st, "warn", f"[KUYRUK] client goruntusu guncel degil, kuyruk temizlendi ({w})")
-                    continue
-                if captcha_global_active:
-                    self._clear_hedef_kuyruk(w)
-                    with self.st.lk:
-                        self.st.durum[w] = "CAPTCHA" if w == captcha_global_owner else "CAPTCHA BEKLE"
-                        self.st.captcha_block[w] = True
-                        self.st.captcha_state[w] = True
-                    continue
-                if message_global_active:
-                    self._clear_hedef_kuyruk(w)
-                    with self.st.lk:
-                        self.st.durum[w] = "MESAJ" if w == message_global_owner else "MESAJ BEKLE"
-                        self.st.captcha_block[w] = True
-                        self.st.captcha_state[w] = True
                     continue
                 if time.time() < captcha_cd.get(w, 0):
                     self._clear_hedef_kuyruk(w)
@@ -2012,8 +1995,6 @@ class VisionThread(threading.Thread):
             self._global_pause_last_warn = now
 
     def _set_global_captcha(self, owner_pk, owner_ci=None, reason="CAPTCHA"):
-        self._set_global_pause_state("CAPTCHA", owner_pk, owner_ci, reason)
-        active_keys = self._active_client_pks()
         now = time.time()
         should_log = False
         with self.st.lk:
@@ -2023,47 +2004,30 @@ class VisionThread(threading.Thread):
             self.st.captcha_global_owner = owner_pk
             if not self.st.captcha_global_since:
                 self.st.captcha_global_since = now
-            for pk in active_keys:
-                self.st.captcha_block[pk] = True
-                self.st.captcha_state[pk] = True
-                self.st.durum[pk] = "CAPTCHA" if pk == owner_pk else "CAPTCHA BEKLE"
+            self.st.captcha_block[owner_pk] = True
+            self.st.captcha_state[owner_pk] = True
+            self.st.durum[owner_pk] = "CAPTCHA"
             should_log = (not prev_active) or (prev_owner != owner_pk)
         if should_log:
             label = f"Client {owner_ci}" if owner_ci else owner_pk
-            log_event(self.st, "warn", f"{label} captcha global blok aktif: {reason}")
+            log_event(self.st, "warn", f"{label} captcha islemi aktif: {reason}")
 
     def _clear_global_captcha(self, reason=""):
-        active_keys = self._active_client_pks()
         now = time.time()
         with self.st.lk:
             was_active = self.st.captcha_global_active
+            owner_pk = self.st.captcha_global_owner
             self.st.captcha_global_active = False
             self.st.captcha_global_owner = None
             self.st.captcha_global_since = 0.0
-            message_active = self.st.message_global_active
-            message_owner = self.st.message_global_owner
-            message_since = self.st.message_global_since
-            for pk in active_keys:
-                if message_active:
-                    self.st.captcha_block[pk] = True
-                    self.st.captcha_state[pk] = True
-                    self.st.durum[pk] = "MESAJ" if pk == message_owner else "MESAJ BEKLE"
-                elif now >= self.st.captcha_cd.get(pk, 0):
-                    self.st.captcha_block[pk] = False
-                    self.st.captcha_state[pk] = False
-                    if self.st.durum.get(pk) in ("CAPTCHA", "CAPTCHA BEKLE", "CAPTCHA OCR"):
-                        self.st.durum[pk] = "BEKLIYOR"
-            if message_active:
-                self.st.global_pause_active = True
-                self.st.global_pause_kind = "MESAJ"
-                self.st.global_pause_owner = message_owner
-                self.st.global_pause_reason = "captcha temizlendi, mesaj bekliyor"
-                self.st.global_pause_since = message_since or now
+            if owner_pk and now >= self.st.captcha_cd.get(owner_pk, 0):
+                self.st.captcha_block[owner_pk] = False
+                self.st.captcha_state[owner_pk] = False
+                if self.st.durum.get(owner_pk) in ("CAPTCHA", "CAPTCHA BEKLE", "CAPTCHA OCR"):
+                    self.st.durum[owner_pk] = "BEKLIYOR"
         if was_active:
             suffix = f": {reason}" if reason else ""
-            log_event(self.st, "info", f"Captcha global blok temizlendi{suffix}")
-        if not message_active:
-            self._clear_global_pause_state("CAPTCHA", reason)
+            log_event(self.st, "info", f"Captcha islemi temizlendi{suffix}")
 
     def _message_captcha_enabled(self, cc):
         if "message_captcha" in cc:
@@ -2095,8 +2059,6 @@ class VisionThread(threading.Thread):
                 self._duplicate_window_warn_t[key] = now
 
     def _set_global_message(self, owner_pk, owner_ci=None, reason="MESAJ"):
-        self._set_global_pause_state("MESAJ", owner_pk, owner_ci, reason)
-        active_keys = self._active_client_pks()
         now = time.time()
         should_log = False
         with self.st.lk:
@@ -2106,51 +2068,35 @@ class VisionThread(threading.Thread):
             self.st.message_global_owner = owner_pk
             if not self.st.message_global_since:
                 self.st.message_global_since = now
-            for pk in active_keys:
-                self.st.captcha_block[pk] = True
-                self.st.captcha_state[pk] = True
-                self.st.durum[pk] = "MESAJ" if pk == owner_pk else "MESAJ BEKLE"
+            self.st.captcha_block[owner_pk] = True
+            self.st.captcha_state[owner_pk] = True
+            self.st.durum[owner_pk] = "MESAJ"
             should_log = (not prev_active) or (prev_owner != owner_pk)
         if should_log:
             label = f"Client {owner_ci}" if owner_ci else owner_pk
-            log_event(self.st, "warn", f"{label} [MESAJ] global blok aktif: {reason}")
+            log_event(self.st, "warn", f"{label} [MESAJ] islemi aktif: {reason}")
 
     def _clear_global_message(self, reason=""):
-        active_keys = self._active_client_pks()
         now = time.time()
         with self.st.lk:
             was_active = self.st.message_global_active
+            owner_pk = self.st.message_global_owner
             self.st.message_global_active = False
             self.st.message_global_owner = None
             self.st.message_global_since = 0.0
-            captcha_active = self.st.captcha_global_active
-            captcha_owner = self.st.captcha_global_owner
-            captcha_since = self.st.captcha_global_since
-            for pk in active_keys:
-                if captcha_active:
-                    self.st.captcha_block[pk] = True
-                    self.st.captcha_state[pk] = True
-                    self.st.durum[pk] = "CAPTCHA" if pk == captcha_owner else "CAPTCHA BEKLE"
-                elif now < self.st.captcha_cd.get(pk, 0):
-                    self.st.captcha_block[pk] = True
-                    self.st.captcha_state[pk] = True
-                    self.st.durum[pk] = "CAPTCHA"
+            if owner_pk:
+                if now < self.st.captcha_cd.get(owner_pk, 0):
+                    self.st.captcha_block[owner_pk] = True
+                    self.st.captcha_state[owner_pk] = True
+                    self.st.durum[owner_pk] = "CAPTCHA"
                 else:
-                    self.st.captcha_block[pk] = False
-                    self.st.captcha_state[pk] = False
-                    if self.st.durum.get(pk) in ("MESAJ", "MESAJ BEKLE"):
-                        self.st.durum[pk] = "BEKLIYOR"
-            if captcha_active:
-                self.st.global_pause_active = True
-                self.st.global_pause_kind = "CAPTCHA"
-                self.st.global_pause_owner = captcha_owner
-                self.st.global_pause_reason = "mesaj temizlendi, captcha bekliyor"
-                self.st.global_pause_since = captcha_since or now
+                    self.st.captcha_block[owner_pk] = False
+                    self.st.captcha_state[owner_pk] = False
+                    if self.st.durum.get(owner_pk) in ("MESAJ", "MESAJ BEKLE"):
+                        self.st.durum[owner_pk] = "BEKLIYOR"
         if was_active:
             suffix = f": {reason}" if reason else ""
-            log_event(self.st, "info", f"[MESAJ] global blok temizlendi{suffix}")
-        if not captcha_active:
-            self._clear_global_pause_state("MESAJ", reason)
+            log_event(self.st, "info", f"[MESAJ] islemi temizlendi{suffix}")
 
     def _detect_message_notification(self, img):
         if img is None or img.size == 0:
@@ -3011,28 +2957,6 @@ class VisionThread(threading.Thread):
                         self._set_global_captcha(pk, ci, status or "captcha kontrol")
                         continue
 
-                # Captcha her zaman mesajdan once gelir. Aktif captcha varken mesaj
-                # icin click/paste yapma; captcha temizlenince ayni pencere tekrar taranir.
-                with self.st.lk:
-                    captcha_global_active = self.st.captcha_global_active
-                    captcha_global_owner = self.st.captcha_global_owner
-                if captcha_global_active:
-                    with self.st.lk:
-                        self.st.captcha_block[pk] = True
-                        self.st.captcha_state[pk] = True
-                        self.st.durum[pk] = "CAPTCHA" if pk == captcha_global_owner else "CAPTCHA BEKLE"
-                    continue
-
-                with self.st.lk:
-                    message_global_active = self.st.message_global_active
-                    message_global_owner = self.st.message_global_owner
-                if message_global_active and pk != message_global_owner:
-                    with self.st.lk:
-                        self.st.captcha_block[pk] = True
-                        self.st.captcha_state[pk] = True
-                        self.st.durum[pk] = "MESAJ BEKLE"
-                    continue
-
                 if self._handle_message_request(ci, pk, img, ox, oy, hwnd, cc):
                     continue
 
@@ -3233,16 +3157,6 @@ class VisionThread(threading.Thread):
                 self.st.frame_b64.update(b64_frames)
                 now = time.time()
                 for pk in active_keys:
-                    if self.st.message_global_active:
-                        self.st.captcha_block[pk] = True
-                        self.st.captcha_state[pk] = True
-                        self.st.durum[pk] = "MESAJ" if pk == self.st.message_global_owner else "MESAJ BEKLE"
-                        continue
-                    if self.st.captcha_global_active:
-                        self.st.captcha_block[pk] = True
-                        self.st.captcha_state[pk] = True
-                        self.st.durum[pk] = "CAPTCHA" if pk == self.st.captcha_global_owner else "CAPTCHA BEKLE"
-                        continue
                     if pk not in guncel and now >= self.st.captcha_cd.get(pk, 0):
                         self.st.captcha_block[pk] = False
                         self.st.captcha_state[pk] = False
