@@ -4,9 +4,13 @@ __pycache__/
 *$py.class
 .venv/
 
-# Runtime logs and captures
-runtime/logs/
-runtime/captcha_kontrol/
+# Runtime logs and captures (keep folder structure with .gitkeep)
+runtime/logs/*
+!runtime/logs/.gitkeep
+runtime/evidence/*
+!runtime/evidence/.gitkeep
+runtime/captcha_kontrol/*
+!runtime/captcha_kontrol/.gitkeep
 
 # User-specific config (generated at first run)
 config_phantom.json
