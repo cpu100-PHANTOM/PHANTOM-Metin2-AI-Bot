@@ -1,0 +1,27 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+
+# Runtime logs and captures (keep folder structure with .gitkeep)
+runtime/logs/*
+!runtime/logs/.gitkeep
+runtime/evidence/*
+!runtime/evidence/.gitkeep
+runtime/captcha_kontrol/*
+!runtime/captcha_kontrol/.gitkeep
+runtime/easyocr_models/
+
+# User-specific config (generated at first run)
+config_phantom.json
+
+# Windows
+*.dll
+!interception.dll
+!lib/interception/**/*.dll
+!lib/interception/**/*.exe
+
+# IDE
+.vscode/
+.idea/

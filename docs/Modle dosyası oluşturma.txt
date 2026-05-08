@@ -1,0 +1,30 @@
+çalışma zamanına tıkla > çalışma zamanı türünü değiştir > t4 gpu seç kaydet
+
+roboflowdan aldığın kodu yapıştır ve çalışıtır.
+
+
+ardından bu kodu yapıştır ve çalıştır:
+
+-----------------------------------
+-----------------------------------
+
+
+# YOLOv8 kütüphanesini kuralım
+!pip install ultralytics
+
+from ultralytics import YOLO
+
+# En hızlı modeli (YOLOv8 Nano) seçiyoruz. 
+# Oyun botu ekranı saliseler içinde okumak zorunda olduğu için en ideali budur.
+model = YOLO('yolov8n.pt')
+
+print("Yapay zeka taşları öğrenmeye başlıyor...")
+
+# Eğitimi başlatıyoruz (50 tur - epoch)
+results = model.train(data=f"{dataset.location}/data.yaml", epochs=50, imgsz=640)
+
+
+-------------------------------------
+-------------------------------------
+
+hazır dosyalardan al .pt dosyasını
