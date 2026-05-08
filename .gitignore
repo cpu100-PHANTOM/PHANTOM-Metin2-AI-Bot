@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.venv/
 
 # Runtime logs and captures
 runtime/logs/
@@ -12,6 +13,7 @@ config_phantom.json
 
 # Windows
 *.dll
+!interception.dll
 
 # IDE
 .vscode/

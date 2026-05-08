@@ -1140,6 +1140,7 @@
               <span class="form-label">Captcha Tipi</span>
               <div class="input-wrapper">
                 <select class="input-field" id="gCapType" onchange="saveCaptchaGlobal()">
+                  <option value="off">Kapalı</option>
                   <option value="tip4">Origins Çözümleyici</option>
                   <option value="tip1">Helios Algoritması</option>
                   <option value="tip2">Merlis Motoru</option>
@@ -1423,7 +1424,8 @@
       return {
         oto_loot: cfg?.oto_loot ?? cfg?.c1?.oto_loot ?? true,
         message_captcha: cfg?.message_captcha ?? cfg?.c1?.message_captcha ?? true,
-        captcha_tip1: cfg?.captcha_tip1 ?? cfg?.c1?.captcha_tip1 ?? true,
+        captcha: cfg?.captcha ?? cfg?.c1?.captcha ?? false,
+        captcha_tip1: cfg?.captcha_tip1 ?? cfg?.c1?.captcha_tip1 ?? false,
         captcha_tip2: cfg?.captcha_tip2 ?? cfg?.c1?.captcha_tip2 ?? false,
         captcha_tip4: cfg?.captcha_tip4 ?? cfg?.c1?.captcha_tip4 ?? false,
         anti_sucuk: cfg?.anti_sucuk ?? false,
@@ -1439,9 +1441,11 @@
       if (msg) msg.checked = !!src.message_captcha;
       if (anti) anti.checked = !!src.anti_sucuk;
       if (type) {
-        if (src.captcha_tip4) type.value = 'tip4';
+        if (!src.captcha && !src.captcha_tip1 && !src.captcha_tip2 && !src.captcha_tip4) type.value = 'off';
+        else if (src.captcha_tip4) type.value = 'tip4';
         else if (src.captcha_tip2) type.value = 'tip2';
-        else type.value = 'tip1';
+        else if (src.captcha_tip1) type.value = 'tip1';
+        else type.value = 'off';
       }
     }
 
@@ -1461,9 +1465,9 @@
 
     async function saveCaptchaGlobal() {
       if (!apiReady()) return toast('pywebview API hazır değil');
-      const selected = document.getElementById('gCapType')?.value || 'tip4';
+      const selected = document.getElementById('gCapType')?.value || 'off';
       const payload = {
-        captcha: true,
+        captcha: selected !== 'off',
         captcha_tip1: selected === 'tip1',
         captcha_tip2: selected === 'tip2',
         captcha_tip3: false,

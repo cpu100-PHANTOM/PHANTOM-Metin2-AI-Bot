@@ -659,9 +659,9 @@ def _client_varsayilan():
     return {
         "aktif":True,"pencere":"Yok","conf_esik":FIXED_CONF_ESIK,"oto_loot":True,
         "hp_region":[0.02,0.07,0.30,0.70],"hp_bekleme_sn":FIXED_HP_BEKLEME_SN,"hp_stuck_timeout":20,
-        "ignore_radius":35,"captcha":True,"debug_on":True,"message_captcha":True,
+        "ignore_radius":35,"captcha":False,"debug_on":True,"message_captcha":True,
         "loot_taps":LOOT_BURST_TAPS,"loot_interval":LOOT_TAP_INTERVAL,"loot_delay":LOOT_POST_KILL_DELAY,
-        "captcha_tip1":True,"captcha_tip2":True,"captcha_tip3":True,"captcha_tip4":True,
+        "captcha_tip1":False,"captcha_tip2":False,"captcha_tip3":False,"captcha_tip4":False,
         "cember_yaricap":200,
         "cember_aktif":True,
     }
@@ -676,12 +676,12 @@ VARSAYILAN = {
     "loot_taps":LOOT_BURST_TAPS,
     "loot_interval":LOOT_TAP_INTERVAL,
     "loot_delay":LOOT_POST_KILL_DELAY,
-    "captcha":True,
+    "captcha":False,
     "message_captcha":True,
-    "captcha_tip1":True,
-    "captcha_tip2":True,
-    "captcha_tip3":True,
-    "captcha_tip4":True,
+    "captcha_tip1":False,
+    "captcha_tip2":False,
+    "captcha_tip3":False,
+    "captcha_tip4":False,
     "cember_yaricap":200,
     "cember_aktif":True,
     "mesafe_kontrol_aktif":True,
@@ -820,7 +820,7 @@ class State:
         self.global_pause_since = 0.0
         self.logs = deque(maxlen=500)
         self.target_memory = {}  # w â†’ {"positions": [(x,y),...], "consecutive_found": int, "confirmed": bool, "last_confirmed_pos": (x,y)}
-        self.kill_counts = {}  # pk â†’ int (session bazlÄ± kill sayacÄ±)
+        self.kill_counts = {}  # c1/c2 -> int; eski pencere anahtarlari fallback olarak desteklenir
         self.scene_changed_t = {}  # pk â†’ son ekran hareketi zamanÄ± (koordinat bazlÄ± hareketsiz tespiti)
         self.message_farm_pause_until = {}
 
@@ -869,6 +869,20 @@ class ActionThread(threading.Thread):
         if w not in self.dur:
             self.dur[w]="ARANIYOR"
             self.dogr_t[w]=0; self.dogr_n[w]=0
+
+    def _kill_count_key(self, client_idx=None):
+        try:
+            ci = int(client_idx)
+        except (TypeError, ValueError):
+            return None
+        return f"c{ci}" if ci in (1, 2) else None
+
+    def _record_kill(self, w, client_idx=None):
+        key = self._kill_count_key(client_idx) or w
+        if not key:
+            return
+        with self.st.lk:
+            self.st.kill_counts[key] = self.st.kill_counts.get(key, 0) + 1
 
     def _input_blocked(self, w=None):
         with self.st.lk:
@@ -1195,6 +1209,11 @@ class ActionThread(threading.Thread):
         center_radius = self._hedef_kuyruk_merkez_yaricap(cc)
 
         if not hp_var:
+            if q.get("hp_was_visible"):
+                log_event(self.st, "info", f"Mob oldu: {w}")
+                self._record_kill(w, q.get("client_idx") or client_idx)
+                if cc.get("oto_loot", True):
+                    self._loot_burst_async(w, hwnd, cc, "mob oldu")
             q["hp_was_visible"] = False
             q["hp_visible_lock"] = False
             q["pending_click_at"] = 0.0
@@ -1410,7 +1429,7 @@ class ActionThread(threading.Thread):
             # Timeout dolmadÄ±, bekle
             pass
 
-    def _handle_savasiyor(self, w, hp_var, cc, hwnd, now, gecerli, ecx, ecy, ox, oy):
+    def _handle_savasiyor(self, w, hp_var, cc, hwnd, now, gecerli, ecx, ecy, ox, oy, client_idx=None):
         import numpy as np
         anti_sucuk = bool(self.cfg.g("anti_sucuk"))
         stuck_sn = FIXED_ANTI_STUCK_SN
@@ -1478,8 +1497,7 @@ class ActionThread(threading.Thread):
                 self._clear_target_click_cooldown(w, cc, now)
                 self._son_tiklama_zamani[w] = now
                 self._takilma_baslat_t.pop(w, None)
-                with self.st.lk:
-                    self.st.kill_counts[w] = self.st.kill_counts.get(w, 0) + 1
+                self._record_kill(w, client_idx)
                 if cc.get("oto_loot", True):
                     self._loot_burst_async(w, hwnd, cc, "mob oldu")
             else:
@@ -1748,7 +1766,7 @@ class ActionThread(threading.Thread):
                     elif state == "DOGRULAMA":
                         self._handle_dogrulama(w, hp_var, cc)
                     elif state == "SAVASIYOR":
-                        self._handle_savasiyor(w, hp_var, cc, hwnd, now, gecerli, ecx, ecy, ox, oy)
+                        self._handle_savasiyor(w, hp_var, cc, hwnd, now, gecerli, ecx, ecy, ox, oy, client_idx=client_idx)
                 except Exception as e:
                     log_event(self.st, "error", f"ActionThread hatasi ({state}): {e}")
                     self.dur[w] = "ARANIYOR"  # gÃ¼venli sÄ±fÄ±rlama
@@ -3333,6 +3351,10 @@ class API:
         for ci in [1, 2]:
             cc = self.cfg.client(ci)
             pk = cc.get("pencere", "Yok")
+            client_kill_key = f"c{ci}"
+            kill_count = kill_counts.get(client_kill_key)
+            if kill_count is None:
+                kill_count = kill_counts.get(pk, 0)
             client_aktif = cc.get("aktif", True)
             hp_ready = bool(cc.get("hp_region_custom")) or bool(cc.get("hp_region"))
             window_ready = client_aktif and pk != "Yok"
@@ -3358,7 +3380,7 @@ class API:
                 "captcha": (captcha_state.get(pk, False) if live_seen else False),
                 "hp_template": hp_ready,
                 "hp_template_score": 1.0 if hp_ready else 0.0,
-                "kill_count": kill_counts.get(pk, 0)
+                "kill_count": kill_count
             }
             if not client_aktif:
                 result["clients"][str(ci)] = cd

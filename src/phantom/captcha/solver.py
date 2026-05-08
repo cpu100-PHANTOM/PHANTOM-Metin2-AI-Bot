@@ -44,7 +44,7 @@ class CaptchaWatcher:
         self.last_status = "init"
         self.last_detail = ""
         self._last_dialog_log = 0.0
-        self._enabled_tips = {"tip1": True, "tip2": True, "tip3": True, "tip4": True}
+        self._enabled_tips = {"tip1": False, "tip2": False, "tip3": False, "tip4": False}
         # Captcha template — captcha_template.png varsa yükle
         self._header_tpl      = None   # gri template görüntüsü
         self._header_tpl_path = os.path.join(_SCRIPT_DIR, "templates", "captcha_template", "captcha_template.png")
@@ -320,7 +320,7 @@ class CaptchaWatcher:
 
     def _tip_enabled(self, name):
         with self._lock:
-            return bool(self._enabled_tips.get(name, True))
+            return bool(self._enabled_tips.get(name, False))
 
     def _init_ocr(self):
         try:

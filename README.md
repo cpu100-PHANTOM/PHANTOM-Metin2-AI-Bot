@@ -1,147 +1,557 @@
-# PHANTOM — Metin2 AI Bot
+# PHANTOM Bot
 
-> YOLO tabanlı yapay zeka destekli otomasyon botu. Otomatik hedef algılama, HP takibi, anti-stuck ve CAPTCHA çözme özellikleriyle Metin2 deneyiminizi bir üst seviyeye taşıyın.
+> Windows üzerinde çalışan, PyWebView arayüzlü, YOLO tabanlı çift istemci otomasyon projesi.
+> Hedef algılama, HP takibi, hedef kuyruğu, otomatik loot, mesaj koruması, CAPTCHA modülleri,
+> canlı debug görüntüsü ve ayrıntılı log sistemi tek arayüzde toplanır.
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![YOLO](https://img.shields.io/badge/YOLO-Ultralytics-ff6f00)](https://ultralytics.com/)
-[![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)](https://www.microsoft.com/windows)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-
----
-
-## 🚀 Özellikler
-
-- **🎯 Otomatik Hedef Algılama** — YOLO modelleri ile ekrandaki metinleri, yaratıkları ve nesneleri anlık tespit eder.
-- **❤️ HP Takibi** — Oyuncu HP çubuğunu görüntü işleme ile sürekli izler, düşük HP'de bekler.
-- **🛡️ Anti-Stuck Sistemi** — Karakter takıldığında otomatik olarak kurtarır.
-- **🔐 CAPTCHA Çözme** — EasyOCR ile otomatik CAPTCHA tanıma ve çözümü.
-- **⚡ Otomatik Loot** — Yaratık öldüğünde otomatik `Z` tuşu ile loot toplama.
-- **🖥️ Web Tabanlı Arayüz** — Basit ve kullanıcı dostu HTML arayüzü ile kolay yapılandırma.
-- **🔧 Kolay Yapılandırma** — İlk çalıştırmada otomatik oluşan ayar dosyası ile hızlı özelleştirme.
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-lightgrey)
+![UI](https://img.shields.io/badge/UI-PyWebView%20%2B%20HTML%2FCSS-2f855a)
+![Vision](https://img.shields.io/badge/Vision-Ultralytics%20YOLO-orange)
+![Input](https://img.shields.io/badge/Input-SendInput%20%2F%20Interception-805ad5)
 
 ---
 
-## 📸 Ekran Görüntüleri
+## İçindekiler
 
-| Bot Arayüzü | Yapılandırma ve Tespit |
-|:-----------:|:----------------------:|
-| ![PHANTOM UI 1](docs/screenshots/ui_preview_1.png) | ![PHANTOM UI 2](docs/screenshots/ui_preview_2.png) |
+- [Kısa Özet](#kısa-özet)
+- [Ekran Görüntüleri](#ekran-görüntüleri)
+- [En İşe Yarayan Özellikler](#en-işe-yarayan-özellikler)
+- [Özellikler](#özellikler)
+- [Kurulum](#kurulum)
+- [Başlatma](#başlatma)
+- [İlk Kullanım Akışı](#ilk-kullanım-akışı)
+- [Arayüz Rehberi](#arayüz-rehberi)
+- [Interception ve Girdi Sistemi](#interception-ve-girdi-sistemi)
+- [CAPTCHA ve Mesaj Koruması](#captcha-ve-mesaj-koruması)
+- [Model ve Şablon Dosyaları](#model-ve-şablon-dosyaları)
+- [Dosya Yapısı](#dosya-yapısı)
+- [Ayarlar ve Loglar](#ayarlar-ve-loglar)
+- [Sorun Giderme](#sorun-giderme)
+- [Geliştirici Notları](#geliştirici-notları)
+- [Sorumluluk Notu](#sorumluluk-notu)
 
 ---
 
-## ⚙️ Gereksinimler
+## Kısa Özet
 
-| Bileşen | Minimum |
-|---------|---------|
-| İşletim Sistemi | Windows 10 / 11 (64-bit) |
-| Python | 3.10, 3.11 veya 3.12 |
-| GPU | Tercihen CUDA destekli (daha hızlı YOLO çıkarımı) |
-| RAM | 4 GB+ |
+PHANTOM Bot, iki ayrı oyun istemcisini aynı panelden yönetmek için tasarlanmış bir otomasyon aracıdır. Her client için ayrı model, pencere, HP paneli ve canlı debug görüntüsü tutulur. Bot, ekrandaki hedefleri YOLO modeli ile algılar, HP durumuna göre savaş akışını takip eder, hedef öldüğünde loot toplar ve istatistikleri arayüzde gösterir.
+
+Projenin hedefi, başka bir Windows bilgisayarda da minimum manuel işlemle çalışmaktır. Bu yüzden kurulum akışı `.venv` tabanlıdır; sistem Python ortamını kirletmez, eksik Python sürümünü indirir, gerekli paketleri kurar ve sonunda gerçek import testi yapar.
 
 ---
 
-## 📦 Kurulum
+## Ekran Görüntüleri
 
-### 1. Python'u İndirin
-[python.org](https://www.python.org/downloads/) adresinden **Python 3.10 - 3.12 (64-bit)** sürümünü indirin.  
-**Kurulum sırasında `"Add Python to PATH"` seçeneğini işaretlemeyi unutmayın!**
+| İstemci Paneli | Ayarlar ve İzleme |
+| --- | --- |
+| ![PHANTOM istemci paneli](docs/screenshots/ui_preview_1.png) | ![PHANTOM ayarlar paneli](docs/screenshots/ui_preview_2.png) |
 
-### 2. Gerekli Kütüphaneleri Kurun
+---
 
-**Otomatik Kurulum (Önerilen):**
-```batch
+## En İşe Yarayan Özellikler
+
+| Özellik | Neden önemli? | Ne zaman kullanılmalı? |
+| --- | --- | --- |
+| Hedef Kuyruğu | Bir hedefte HP varken sıradaki hedefi hazırlayarak bekleme süresini azaltır. | Yoğun hedef bulunan alanlarda en verimli moddur. |
+| HP Panel Seçimi | Botun savaşta mı, aramada mı olduğunu anlamasının ana sinyalidir. | İlk kurulumdan sonra her client için mutlaka seçilmelidir. |
+| Canlı Debug Görüntüsü | Modelin ne gördüğünü, HP kutusunu ve hedef merkezini anında gösterir. | Yanlış tıklama, model görmeme veya HP algılama sorunlarında ilk bakılacak yerdir. |
+| Interception / SendInput Katmanı | Girdi gönderimini otomatik olarak uygun yöntemle yapar. | Interception kullanılabiliyorsa daha düşük seviyeli input yolu devreye girer; yoksa SendInput ile çalışmaya devam eder. |
+| Mesaj Koruması | Mesaj penceresi veya bildirim algılanınca farm akışını durdurup cevap göndermeye çalışır. | Uzun süreli kullanımda beklenmeyen mesaj pencereleri için faydalıdır. |
+| Kurulum BAT Akışı | Python, sanal ortam, Torch, WebView2 ve paket kontrollerini tek dosyada toplar. | Projeyi başka PC’ye taşırken en kritik yardımcıdır. |
+| Log Sistemi | Kurulum ve çalışma zamanı olaylarını dosyaya yazar. | Kullanıcı destek verirken “bende çalışmıyor” durumunu somut hataya çevirir. |
+
+---
+
+## Özellikler
+
+### Çift Client Yönetimi
+
+- `Client 1` ve `Client 2` ayrı ayrı açılıp kapatılabilir.
+- Her client için ayrı oyun penceresi seçilir.
+- Her client için model dosyası seçilebilir.
+- Her client için HP panel alanı ayrı kaydedilir.
+- Canlı görüntü ve debug aç/kapat kontrolü client bazlıdır.
+- Ayarlar üstteki `C1 ON/OFF` ve `C2 ON/OFF` düğmeleriyle hızlıca değiştirilebilir.
+
+### YOLO Tabanlı Hedef Algılama
+
+- Ultralytics YOLO modeli ile oyun ekranındaki hedefler algılanır.
+- Kararlı hedef filtresi, hedefin iki karede benzer konumda kalmasını bekler.
+- Merkez yakınındaki hedefleri filtrelemek için `ignore_radius` kullanılır.
+- `conf_esik` sabit olarak `0.50` uygulanır.
+- Model inference GPU varsa CUDA üzerinde, yoksa CPU üzerinde çalışır.
+
+### HP Takibi
+
+- Kullanıcı her client için HP bar bölgesini seçer.
+- Seçilen HP alanı template olarak `templates/hp_templates/` altında saklanır.
+- Bot savaş durumunu HP görünürlüğüne göre takip eder.
+- HP kaybolduğunda hedefin öldüğü kabul edilir ve kill istatistiği artar.
+
+### Hedef Kuyruğu
+
+Hedef Kuyruğu, özellikle seri hedef kesme akışında en yararlı otomasyon modlarından biridir.
+
+- İlk hedefe tıklandıktan sonra HP görünürken sıradaki hedef hazırlanır.
+- HP kaybolunca kill sayacı artar ve bot tekrar hedef aramaya döner.
+- Hedef kuyruğu açıkken bot taze frame kontrolü yapar; eski görüntüye göre tıklamayı engeller.
+- Hedefler blacklist mantığıyla tekrar tekrar aynı noktaya basmayacak şekilde filtrelenir.
+
+### Otomatik Loot
+
+- Hedef öldükten sonra `Z` tuşu ile loot toplama tetiklenir.
+- Loot burst davranışı kısa aralıklarla birden fazla basış yapabilir.
+- Oto Loot ayarı `Ayarlar > Otomasyon` bölümünden açılıp kapatılır.
+
+### Anti-Stuck / Kurtarma
+
+- Arama, savaş ve kuyruk durumlarında takılma belirtileri izlenir.
+- Belirli süre hedef bulunmazsa veya savaş uzarsa kurtarma manevrası uygulanır.
+- Geri ve yan hareket kombinasyonları ile karakterin sıkıştığı yerden çıkması hedeflenir.
+- Varsayılan sabitler:
+  - Savaş uzarsa kontrol: `15.0s`
+  - Hareketsizlik kontrolü: `10.0s`
+  - Kurtarma cooldown: `3.0s`
+
+### Mesaj Koruması
+
+- Mesaj bildirimi veya mesaj penceresi algılanırsa farm akışı global olarak duraklatılır.
+- Bot kısa cevaplardan birini seçerek yanıt göndermeye çalışır.
+- Yanıt sonrası ilgili client için farm kısa süre duraklatılır.
+- Kendi gönderdiği mesajları tekrar gelen mesaj sanmamak için basit benzerlik ve geçmiş kontrolü kullanılır.
+
+### CAPTCHA Modülleri
+
+CAPTCHA varsayılan olarak kapalı gelir. Gerektiğinde `Ayarlar > Güvenlik > Captcha Tipi` menüsünden açılır.
+
+- `Kapalı`: CAPTCHA solver tamamen devre dışı.
+- `Origins Çözümleyici`: Origins matematik CAPTCHA akışına odaklanır.
+- `Helios Algoritması`: Görsel seçim / hedef kelime benzeri tipler için kullanılır.
+- `Merlis Motoru`: Bütünlüğü bozan veya farklı kare mantığındaki tipler için kullanılır.
+
+CAPTCHA sistemi EasyOCR kullanır. OCR ilk açılışta model dosyalarını indirebileceği için ilk kullanımda hazır olması biraz zaman alabilir.
+
+### Loglar ve İstatistik
+
+- Arayüzde `Loglar` sekmesi vardır.
+- Loglar temizlenebilir veya panoya kopyalanabilir.
+- Kurulum logları `runtime/logs/kurulum_*.log` dosyalarına yazılır.
+- Çalışma logları `runtime/logs/events_*.jsonl` dosyalarına yazılır.
+- Client bazlı toplam kill ve süre bilgisi `Ayarlar` sekmesinde görüntülenir.
+
+---
+
+## Kurulum
+
+### Önerilen Yöntem
+
+Projeyi yeni bir Windows bilgisayara taşıdıktan sonra yalnızca şu dosyayı çalıştırın:
+
+```bat
 kurulum.bat
 ```
 
-**Manuel Kurulum:**
-```bash
-pip install opencv-python numpy mss keyboard ultralytics torch pywin32 pyglet easyocr
-```
-> ⏳ İlk kurulum 5-15 dakika sürebilir (torch ve easyocr büyük paketlerdir).
+Kurulum scripti şunları yapar:
 
-### 3. Botu Başlatın
-```batch
+1. Python 3.11 var mı kontrol eder.
+2. Python 3.11 yoksa resmi Python 3.11.9 kurulum dosyasını indirir.
+3. Proje içinde `.venv` sanal ortamı oluşturur.
+4. `pip`, `setuptools` ve `wheel` paketlerini günceller.
+5. NVIDIA GPU varsa CUDA destekli Torch kurmayı dener.
+6. CUDA Torch kurulamazsa CPU Torch’a otomatik düşer.
+7. Proje bağımlılıklarını kurar:
+   - `torch`, `torchvision`, `torchaudio`
+   - `ultralytics`
+   - `opencv-python`
+   - `numpy`
+   - `mss`
+   - `keyboard`
+   - `pywin32`
+   - `pywebview`
+   - `easyocr`
+8. Microsoft WebView2 Runtime kurulumunu dener.
+9. Son adımda gerçek import testi yapar.
+
+Kurulum sırasında hata olursa terminalde kısa hata görünür. Ayrıntılı hata logu şurada tutulur:
+
+```text
+runtime/logs/kurulum_YYYYMMDD_HHMMSS.log
+```
+
+### Gereksinimler
+
+| Bileşen | Gereksinim |
+| --- | --- |
+| İşletim sistemi | Windows 10 veya Windows 11, 64-bit |
+| Python | Kurulum scripti Python 3.11.9 kurabilir |
+| İnternet | İlk kurulumda Python, Torch, EasyOCR ve paketler için gerekli |
+| GPU | Opsiyonel; NVIDIA GPU varsa CUDA Torch denenir |
+| WebView2 | Kurulum scripti kurmayı dener; çoğu Windows 10/11 sistemde zaten yüklüdür |
+| Yetki | Bot başlatıcı yönetici izni ister |
+
+### Neden `.venv` Kullanılıyor?
+
+`.venv`, bağımlılıkları proje içine izole eder. Böylece başka bir PC’de sistem Python’u farklı olsa bile bot kendi ortamından çalışır. Bu yaklaşım özellikle Torch, EasyOCR ve pywin32 gibi Windows’ta hassas bağımlılıklar için daha kararlıdır.
+
+---
+
+## Başlatma
+
+Kurulumdan sonra botu başlatmak için:
+
+```bat
 PHANTOM.bat
 ```
-Yönetici yetkisi isteyebilir.
 
----
+`PHANTOM.bat` şu davranışlara sahiptir:
 
-## 🎮 Kullanım
+- Yönetici izni ister.
+- `.venv` yoksa `kurulum.bat /auto` çalıştırır.
+- Kurulum başarılıysa `metin_bot_webview.py` dosyasını `.venv` içindeki Python ile başlatır.
+- Uygulama hata ile kapanırsa terminal penceresini açık bırakır.
 
-| Adım | Açıklama |
-|------|----------|
-| 1 | `PHANTOM.bat` dosyasını çalıştırın |
-| 2 | YOLO model dosyasını (`.pt`) seçin |
-| 3 | Metin2 oyun penceresini seçin |
-| 4 | HP panel bölgesini fare ile çizin |
-| 5 | Gerekirse skill, loot ve CAPTCHA ayarlarını yapın |
-| 6 | **BAŞLAT** butonuna veya `F5` tuşuna basın |
-
----
-
-## ⌨️ Klavye Kısayolları
+Kısayol:
 
 | Tuş | İşlev |
-|-----|-------|
-| `F5` | Botu Başlat / Durdur |
+| --- | --- |
+| `F5` | Botu başlatır veya durdurur |
 
 ---
 
-## 🏗️ Proje Yapısı
+## İlk Kullanım Akışı
 
-```
+1. `kurulum.bat` dosyasını çalıştırın.
+2. Kurulum bittikten sonra `PHANTOM.bat` dosyasını açın.
+3. `İstemciler` sekmesinde `Client 1` için model seçin.
+4. `Pencere` listesinden oyun penceresini seçin.
+5. `HP Panel` düğmesiyle HP bar alanını ekrandan seçin.
+6. Gerekirse aynı işlemleri `Client 2` için de yapın.
+7. `Ayarlar` sekmesinden Oto Loot, Hedef Kuyruğu, Kurtarma ve CAPTCHA durumunu ayarlayın.
+8. Debug görüntüsünde hedef ve HP kutularının doğru göründüğünü kontrol edin.
+9. `Başlat` düğmesine veya `F5` tuşuna basın.
+
+---
+
+## Arayüz Rehberi
+
+### İstemciler Sekmesi
+
+| Alan | Açıklama |
+| --- | --- |
+| Model | Client için kullanılacak `.pt` YOLO modelini seçer. |
+| Pencere | Otomasyon yapılacak oyun penceresini seçer. |
+| HP Panel | HP bar bölgesini seçmek için ekran üzerinden ROI seçimi açar. |
+| Canlı Görüntü | Debug feed üzerinde model çıktısını, merkez çizgisini ve HP alanını gösterir. |
+| Debug | Görüntü encode ve arayüz feed maliyetini açar/kapatır. |
+| C1/C2 ON-OFF | Client’ın aktif olup olmayacağını belirler. |
+
+### Ayarlar Sekmesi
+
+| Alan | Açıklama |
+| --- | --- |
+| Captcha Tipi | CAPTCHA solver modunu seçer. Varsayılan: `Kapalı`. |
+| Mesaj Koruması | Mesaj algılama ve otomatik cevap sistemini açar/kapatır. |
+| Kurtarma | Takılma ve hareketsizlik kurtarma manevralarını açar/kapatır. |
+| Oto Loot | Hedef öldüğünde loot toplama basışlarını açar/kapatır. |
+| Hedef Kuyruğu | Seri hedef akışı için sıradaki hedefi hazırlayan modu açar/kapatır. |
+| Toplam Kill | Client bazlı kill sayacını gösterir. |
+| Süre | Botun açık kaldığı süreyi gösterir. |
+
+### Loglar Sekmesi
+
+| Alan | Açıklama |
+| --- | --- |
+| Temizle | Arayüzde görünen logları temizler; dosyadaki logları silmez. |
+| Kopyala | Görünen logları panoya kopyalar. |
+
+---
+
+## Interception ve Girdi Sistemi
+
+PHANTOM iki seviyeli girdi sistemi kullanır:
+
+1. `Interception`: `interception.dll` bulunur ve sistemde kullanılabilir context oluşursa devreye girer.
+2. `SendInput`: Interception kullanılamazsa otomatik fallback olarak kullanılır.
+
+Bu tasarım sayesinde Interception hazır olmayan bilgisayarlarda uygulama hata verip kapanmaz; SendInput ile çalışmaya devam eder.
+
+### Interception Ne Sağlar?
+
+- Daha düşük seviyeli mouse ve klavye event gönderimi sağlar.
+- Mouse hareketi, sol tık, sağ tık ve bazı klavye basışlarında kullanılabilir.
+- Klavye cihazı bulunursa `Z`, `Ctrl+V`, `Enter` gibi basışlarda da kullanılabilir.
+- Çok monitör senaryolarında absolute mouse koordinatı için virtual desktop bayrağı kullanılır.
+
+### Interception Hazır Değilse Ne Olur?
+
+Bot otomatik olarak SendInput moduna düşer. Bu durumda:
+
+- Mouse hareketi Windows `SetCursorPos` ve `SendInput` ile yapılır.
+- Klavye basışları `keyboard` paketi üzerinden gönderilir.
+- Arayüzde ve loglarda `Interception bulunamadi` / `SendInput` bilgileri görülebilir.
+
+### Paketleme Notu
+
+`interception.dll` proje kökünde bulunmalıdır. `.gitignore` içinde bu dosya için istisna tanımlıdır. Projeyi Git veya ZIP ile başka PC’ye taşırken bu dosyanın da gittiğinden emin olun.
+
+---
+
+## CAPTCHA ve Mesaj Koruması
+
+CAPTCHA sistemi `src/phantom/captcha/solver.py` içinde yer alır ve `CaptchaWatcher` sınıfı ile çalışır.
+
+### CAPTCHA Dosyaları
+
+| Dosya | Amaç |
+| --- | --- |
+| `templates/captcha_template/captcha_template.png` | CAPTCHA dialog doğrulama ve template scan için kullanılır. |
+| `templates/captcha_keypad/captcha_keypad.png` | Sayısal keypad / görsel doğrulama akışlarında referans olarak kullanılır. |
+| `runtime/captcha_kontrol/` | Çözüm öncesi veya teşhis amaçlı CAPTCHA görüntülerinin kaydedildiği klasördür. |
+
+### CAPTCHA Tipleri
+
+| Arayüz seçeneği | Teknik karşılık | Açıklama |
+| --- | --- | --- |
+| Kapalı | `captcha=false`, tüm tipler `false` | Solver devre dışı. Varsayılan ve en güvenli başlangıç modudur. |
+| Origins Çözümleyici | `captcha_tip4=true` | Matematik / toplam sonucu isteyen Origins tipi dialoglar için kullanılır. |
+| Helios Algoritması | `captcha_tip1=true` | Görsel veya hedef kelime seçimi mantığındaki tipler için kullanılır. |
+| Merlis Motoru | `captcha_tip2=true` | Farklı kare veya bütünlüğü bozan kare seçimi mantığındaki tipler için kullanılır. |
+
+### Mesaj Koruması Nasıl Çalışır?
+
+- Mesaj bildirimi veya açık mesaj penceresi aranır.
+- Sarı mesaj satırları OCR ile okunabilir.
+- Kısa ve bağlama göre seçilen cevaplar gönderilir.
+- Mesaj cevaplandıktan sonra farm kısa süre duraklatılır.
+- CAPTCHA aktifse mesaj işlemi CAPTCHA bekleme durumuna saygı gösterir.
+
+---
+
+## Model ve Şablon Dosyaları
+
+### Hazır Modeller
+
+| Dosya | Açıklama |
+| --- | --- |
+| `models/Büyülü_metni.pt` | Büyülü metin modeli. |
+| `models/Guatama_metni.pt` | Guatama metni modeli. |
+| `models/Gölge_metni.pt` | Gölge metni modeli. |
+| `models/Kızıl_metni.pt` | Kızıl metin modeli. |
+
+Model seçimi client bazlı yapılır. Yanlış model seçilirse hedef algılama performansı doğrudan düşer. En iyi sonuç için bulunduğunuz harita ve hedef tipine uygun modeli seçin.
+
+### Şablonlar
+
+| Klasör | Açıklama |
+| --- | --- |
+| `templates/hp_templates/` | Client HP template dosyaları burada oluşur. |
+| `templates/message_templates/` | Mesaj / GM bildirimi benzeri template dosyaları. |
+| `templates/captcha_template/` | CAPTCHA dialog doğrulama template’i. |
+| `templates/captcha_keypad/` | CAPTCHA keypad template’i. |
+
+---
+
+## Dosya Yapısı
+
+```text
 PHANTOM_BOT/
-├── src/
-│   └── phantom/
-│       ├── app/           # Ana uygulama ve arayüz
-│       ├── automation/    # Otomasyon modülleri
-│       ├── captcha/       # CAPTCHA çözme motoru
-│       ├── core/          # Çekirdek iş mantığı
-│       ├── input/         # Girdi/klavye simülasyonu
-│       └── vision/        # Görüntü işleme ve YOLO entegrasyonu
-├── models/                # YOLO model dosyaları (.pt)
-├── templates/             # HP, CAPTCHA ve mesaj şablonları
-├── runtime/               # Çalışma zamanı logları ve CAPTCHA kayıtları
-├── docs/                  # Dokümantasyon ve ekran görüntüleri
-├── PHANTOM.bat            # Başlatıcı
-├── kurulum.bat            # Bağımlılık kurucu
-├── index.html             # Web arayüzü
-└── captcha_solver.py      # Bağımsız CAPTCHA modülü
+├─ PHANTOM.bat
+├─ kurulum.bat
+├─ metin_bot_webview.py
+├─ captcha_solver.py
+├─ interception.dll
+├─ index.html
+├─ config_phantom.json
+├─ models/
+│  ├─ Büyülü_metni.pt
+│  ├─ Guatama_metni.pt
+│  ├─ Gölge_metni.pt
+│  └─ Kızıl_metni.pt
+├─ templates/
+│  ├─ captcha_keypad/
+│  ├─ captcha_template/
+│  ├─ hp_templates/
+│  └─ message_templates/
+├─ runtime/
+│  ├─ logs/
+│  ├─ evidence/
+│  └─ captcha_kontrol/
+├─ src/
+│  └─ phantom/
+│     ├─ app/
+│     ├─ captcha/
+│     ├─ automation/
+│     ├─ core/
+│     ├─ input/
+│     └─ vision/
+└─ docs/
+   └─ screenshots/
+```
+
+### Ana Dosyalar
+
+| Dosya | Rol |
+| --- | --- |
+| `PHANTOM.bat` | Yönetici yetkisi ister, `.venv` yoksa kurulum yapar, botu başlatır. |
+| `kurulum.bat` | Tek tık kurulum dosyasıdır. Python, `.venv`, paketler ve WebView2 kontrolünü yapar. |
+| `metin_bot_webview.py` | Eski giriş noktasını koruyan launcher dosyasıdır. |
+| `index.html` | PyWebView içinde çalışan arayüzdür. |
+| `src/phantom/app/main.py` | Ana uygulama, state, thread’ler, API ve otomasyon akışı. |
+| `src/phantom/captcha/solver.py` | CAPTCHA ve OCR çözüm motoru. |
+| `config_phantom.json` | Kullanıcı ayarlarını tutar. |
+
+---
+
+## Ayarlar ve Loglar
+
+### `config_phantom.json`
+
+Bu dosya kullanıcıya özel ayarları tutar:
+
+- Client aktif/pasif durumu
+- Pencere seçimi
+- Model yolu
+- HP region bilgisi
+- CAPTCHA seçenekleri
+- Mesaj koruması
+- Oto Loot
+- Hedef kuyruğu
+- Kurtarma seçenekleri
+
+Bu dosya `.gitignore` içindedir. Her kullanıcı kendi bilgisayarında kendi pencere ID’lerine ve HP alanlarına sahip olmalıdır.
+
+### `runtime/logs/`
+
+| Dosya tipi | Açıklama |
+| --- | --- |
+| `kurulum_*.log` | Kurulum sırasında çalışan komutlar ve hata detayları. |
+| `events_*.jsonl` | Bot çalışma zamanı olayları. |
+
+Log dosyaları destek ve hata ayıklama için ilk bakılacak yerdir.
+
+### `runtime/evidence/`
+
+Bazı olaylarda ekran görüntüsü veya kanıt amaçlı capture dosyaları kaydedilebilir.
+
+### `runtime/captcha_kontrol/`
+
+CAPTCHA çözüm denemelerinde kaydedilen teşhis görüntülerini içerir.
+
+---
+
+## Sorun Giderme
+
+### `PHANTOM.bat` açılıyor ama uygulama gelmiyor
+
+1. `runtime/logs/` klasöründeki son log dosyasını kontrol edin.
+2. `.venv\Scripts\python.exe` dosyasının oluştuğunu doğrulayın.
+3. `kurulum.bat` dosyasını tekrar çalıştırın.
+4. WebView2 Runtime kurulumunun tamamlandığından emin olun.
+
+### Kurulum Torch aşamasında uzun sürüyor
+
+Torch büyük bir pakettir. CUDA sürümü indiriliyorsa dosya boyutu daha yüksek olabilir. Bu aşama internet hızına göre uzun sürebilir.
+
+### CUDA kurulumu başarısız oldu
+
+Kurulum scripti CUDA Torch başarısız olursa CPU Torch’a düşer. Bot yine çalışır, ancak model inference daha yavaş olabilir. NVIDIA sürücüsünü güncellemek performans için faydalı olabilir.
+
+### Pencere listesinde oyun görünmüyor
+
+- Oyunun açık olduğundan emin olun.
+- Arayüzde pencere yenile düğmesine basın.
+- Oyunu minimize etmeyin.
+- `PHANTOM.bat` yönetici izniyle çalışmalıdır.
+
+### Debug görüntüsü `NO_SIGNAL` gösteriyor
+
+- Botun başlatıldığından emin olun.
+- Client aktif olmalı (`C1 ON` veya `C2 ON`).
+- Pencere doğru seçilmiş olmalı.
+- Seçilen pencere minimize durumda olmamalı.
+- Debug toggle açık olmalı.
+
+### HP algılanmıyor
+
+- HP paneli yeniden seçin.
+- HP bar seçimini mümkün olduğunca dar ve sabit alana yapın.
+- Farklı çözünürlük veya UI ölçeği kullanıyorsanız HP template’i yeniden oluşturun.
+- Debug görüntüsünde HP kutusunun doğru yerde olduğundan emin olun.
+
+### Bot hedefe tıklamıyor
+
+- Doğru YOLO modelini seçin.
+- Debug görüntüsünde hedef kutularının çıkıp çıkmadığını kontrol edin.
+- Hedef Kuyruğu kapalıysa hedefin kararlı algılanması birkaç kare sürebilir.
+- Pencere focus sorunu varsa botu yönetici olarak çalıştırın.
+
+### Interception çalışmıyor
+
+Bu kritik bir hata değildir. Bot otomatik SendInput moduna geçer. Loglarda `Interception bulunamadi` ve `Tiklama modu: SendInput` benzeri kayıtlar görülebilir.
+
+### EasyOCR hazır değil uyarısı
+
+İlk çalıştırmada OCR modelleri hazırlanırken bekleme olabilir. İnternet bağlantısı ve `.venv` kurulumunun tamamlandığını kontrol edin.
+
+### CAPTCHA yanlış algılanıyor
+
+- CAPTCHA tipini ihtiyacınız yoksa `Kapalı` bırakın.
+- Doğru CAPTCHA tipi seçildiğinden emin olun.
+- `templates/captcha_template/captcha_template.png` dosyasının yerinde olduğundan emin olun.
+- `runtime/captcha_kontrol/` klasöründeki kayıtları kontrol edin.
+
+---
+
+## Geliştirici Notları
+
+### Python Kontrolü
+
+Kurulum scripti Python 3.11’i hedefler. Bunun nedeni Torch, EasyOCR, pywin32 ve WebView bağımlılıklarında sürüm uyumluluğunu daha öngörülebilir tutmaktır.
+
+### Sanal Ortamı Temizlemek
+
+Bağımlılıkları sıfırdan kurmak için `.venv` klasörünü silip `kurulum.bat` dosyasını tekrar çalıştırabilirsiniz.
+
+```bat
+rmdir /s /q .venv
+kurulum.bat
+```
+
+### Kod Sağlık Kontrolü
+
+Python sözdizimi kontrolü için:
+
+```bat
+.venv\Scripts\python.exe -m compileall -q src captcha_solver.py metin_bot_webview.py
+```
+
+### Ana Thread’ler
+
+| Thread / Katman | Görev |
+| --- | --- |
+| VisionThread | Ekran yakalama, model inference, HP ve template kontrolleri. |
+| ActionThread | Durum makinesi, hedef seçimi, tıklama, loot ve kurtarma davranışı. |
+| CaptchaWatcher | CAPTCHA dialog algılama, OCR ve çözüm aksiyonları. |
+| PyWebView API | Arayüz ile Python state’i arasında köprü. |
+
+### Durum Akışı
+
+Botun temel durumları şunlardır:
+
+```text
+ARANIYOR -> DOGRULAMA -> SAVASIYOR -> ARANIYOR
+```
+
+Hedef kuyruğu açıkken akış `KUYRUK` durumunu da kullanır. CAPTCHA veya mesaj sırasında global pause devreye girer:
+
+```text
+CAPTCHA / CAPTCHA BEKLE
+MESAJ / MESAJ BEKLE
 ```
 
 ---
 
-## 🧠 Modeller
+## Sorumluluk Notu
 
-Bot, Ultralytics YOLOv8 modellerini kullanır. Projeye dahil olan modeller:
-
-| Model | Amaç |
-|-------|------|
-| `models/Büyülü_metni.pt` | Büyülü metin algılama |
-| `models/Guatama_metni.pt` | Guatama metni algılama |
-| `models/Gölge_metni.pt` | Gölge metni algılama |
-| `models/Kızıl_metni.pt` | Kızıl metin algılama |
-
-**Kendi modelinizi eğitmek için:**
-> `docs/Modle dosyası oluşturma.txt` dosyasına göz atın.
-
----
-
-## ⚠️ Yasal Uyarı ve Sorumluluk Reddi
-
-> Bu proje **eğitim ve araştırma amaçlıdır**. Metin2'nin ve diğer oyunların hizmet şartlarını ihlal edebilir. Yazılımın kullanımından doğacak tüm sorumluluk kullanıcıya aittir. Geliştirici, bu araçtan kaynaklanan hesap kısıtlamaları veya yasal yaptırımlardan sorumlu tutulamaz.
-
----
-
-## 📄 Lisans
-
-Bu proje [MIT Lisansı](LICENSE) ile lisanslanmıştır. Detaylar için `LICENSE` dosyasına bakınız.
-
----
-
-## 💬 İletişim
-
-Sorularınız veya katkılarınız için GitHub [Issues](https://github.com/cpu100-PHANTOM/PHANTOM-Metin2-AI-Bot/issues) bölümünü kullanabilirsiniz.
-
-**İyi oyunlar!** 🎮
+Bu proje otomasyon, görüntü işleme ve Windows input yönetimi üzerine teknik bir çalışmadır. Kullanıldığı ortamın kurallarını, hizmet şartlarını ve hesap güvenliği risklerini değerlendirmek kullanıcının sorumluluğundadır. Proje sahibi veya geliştirici, kullanım sonucunda oluşabilecek hesap kısıtlaması, veri kaybı, sistem hatası veya üçüncü taraf yaptırımlarından sorumlu değildir.
