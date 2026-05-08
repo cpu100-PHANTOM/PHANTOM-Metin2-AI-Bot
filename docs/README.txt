@@ -136,7 +136,10 @@ Bu kadar.
 İLETİŞİM
 ═══════════════════════════════════════════════════════════════
 
-Herhangi bir sorunda kodu inceleyebilir veya kendi başına
-ayarlamalar yapabilirsin.
+Destek almak, sorun bildirmek veya yeni geliştirmelerden
+haberdar olmak isteyenler geliştiriciye Discord üzerinden
+ulaşabilir:
+
+https://discord.gg/k5hV4Hat
 
 İyi oyunlar!

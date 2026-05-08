@@ -27,8 +27,9 @@
 - [Model ve Şablon Dosyaları](#model-ve-şablon-dosyaları)
 - [Dosya Yapısı](#dosya-yapısı)
 - [Ayarlar ve Loglar](#ayarlar-ve-loglar)
-- [Sorun Giderme](#sorun-giderme)
+- [Destek ve İletişim](#destek-ve-iletişim)
 - [Güvenlik ve Antivirüs](#güvenlik-ve-antivirüs)
+- [Sorun Giderme](#sorun-giderme)
 - [Geliştirici Notları](#geliştirici-notları)
 - [Sorumluluk Notu](#sorumluluk-notu)
 
@@ -528,6 +529,14 @@ Bazı olaylarda ekran görüntüsü veya kanıt amaçlı capture dosyaları kayd
 ### `runtime/captcha_kontrol/`
 
 CAPTCHA çözüm denemelerinde kaydedilen teşhis görüntülerini içerir.
+
+---
+
+## Destek ve İletişim
+
+Destek almak, sorun bildirmek veya yeni geliştirmelerden haberdar olmak isteyenler geliştiriciye Discord üzerinden ulaşabilir:
+
+[discord.gg/k5hV4Hat](https://discord.gg/k5hV4Hat)
 
 ---
 
